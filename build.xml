@@ -1,0 +1,41 @@
+<project name="BitTorrent Simulator" default="dist" basedir=".">
+  <description>
+    A BitTorrent simulator.    
+  </description>
+  <property name="source" location="java"/>
+  <property name="tests" location="javatests"/>
+  <property name="build" location="build"/>
+  <property name="dist"  location="dist"/>
+
+  <target name="init">
+    <mkdir dir="${build}"/>
+  </target>
+
+  <target name="compile" depends="init"
+        description="compile the source " >
+    <javac srcdir="${source}" destdir="${build}">
+      <classpath>
+        <fileset dir="third-party-jars">
+          <include name="**/*.jar"/>
+        </fileset>
+      </classpath>
+    </javac>
+    <javac srcdir="${tests}" destdir="${build}"/>
+  </target>
+
+  <target name="dist" depends="compile"
+        description="generate the distribution" >
+    <!-- Create the distribution directory -->
+    <mkdir dir="${dist}/lib"/>
+
+    <!-- Put everything in ${build} into the MyProject-${DSTAMP}.jar file -->
+    <jar jarfile="${dist}/lib/BitTorrentSimulator.jar" basedir="${build}"/>
+  </target>
+
+  <target name="clean"
+        description="clean up" >
+    <!-- Delete the ${build} and ${dist} directory trees -->
+    <delete dir="${build}"/>
+    <delete dir="${dist}"/>
+  </target>
+</project>
