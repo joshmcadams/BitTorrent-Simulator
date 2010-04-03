@@ -55,10 +55,16 @@ public class Simulator {
 
   public static void main(String[] args) {
     BasicConfigurator.configure();
+    Tracker tracker = new TrackerImpl();
+    ImmutableList<Tracker> trackers = ImmutableList.of(tracker);
+    ImmutableList<String> pieces = ImmutableList.of("12345678901234567890");
+    Metainfo.File file = new MetainfoImpl.FileImpl(new Long(10L), ImmutableList.of("x.txt"));
+    ImmutableList<Metainfo.File> files = ImmutableList.of(file);
+
     new Simulator(
-        new TrackerImpl(),
+        tracker,
         new PeerProviderImpl(),
-        new MetainfoImpl()
+        new MetainfoImpl(trackers, pieces, new Long(10L), files)
         ).runExperiment(1000);
   }
 }

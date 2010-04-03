@@ -7,6 +7,7 @@ DEPENDENCIES
  - Google Java Collections Library [http://code.google.com/p/google-collections/]
  - Apache log4j [http://logging.apache.org/log4j/index.html]
  - Apache Ant [http://ant.apache.org/]
+ - Joda-Time [http://joda-time.sourceforge.net/]
 
 LICENSE AND COPYRIGHT
 
