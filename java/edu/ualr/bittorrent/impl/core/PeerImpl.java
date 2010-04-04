@@ -1,6 +1,7 @@
 package edu.ualr.bittorrent.impl.core;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.log4j.Logger;
 
@@ -31,6 +32,14 @@ public class PeerImpl implements Peer {
   private Metainfo metainfo;
   private static final Logger logger = Logger.getLogger(PeerImpl.class);
   private final List<PeerMessage<?>> messageQueue = Lists.newArrayList();
+
+  public PeerImpl(byte[] id) {
+    this.id = Preconditions.checkNotNull(id);
+  }
+
+  public PeerImpl() {
+    this(UUID.randomUUID().toString().getBytes());
+  }
 
   public void setTracker(Tracker tracker) {
     this.tracker = Preconditions.checkNotNull(tracker);

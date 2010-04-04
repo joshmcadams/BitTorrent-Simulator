@@ -1,6 +1,7 @@
 package edu.ualr.bittorrent.impl.core;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.log4j.Logger;
 
@@ -16,6 +17,15 @@ import edu.ualr.bittorrent.interfaces.TrackerResponse;
 public class TrackerImpl implements Tracker {
   List<Peer> peers = Lists.newArrayList();
   private static final Logger logger = Logger.getLogger(PeerImpl.class);
+  private final byte[] id;
+
+  public TrackerImpl() {
+    this(UUID.randomUUID().toString().getBytes());
+  }
+
+  public TrackerImpl(byte[] id) {
+    this.id = Preconditions.checkNotNull(id);
+  }
 
   public synchronized TrackerResponse get(TrackerRequest request) {
     Preconditions.checkNotNull(request);
@@ -42,7 +52,6 @@ public class TrackerImpl implements Tracker {
   }
 
   public byte[] getId() {
-    // TODO Auto-generated method stub
-    return null;
+    return id;
   }
 }

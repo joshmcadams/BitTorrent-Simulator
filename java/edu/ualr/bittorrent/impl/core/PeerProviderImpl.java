@@ -32,7 +32,6 @@ public class PeerProviderImpl implements PeerProvider {
     for (int i = 0; i < 10; i++) {
       Peer peer = new PeerImpl();
       peer.setTracker(metainfo.getTrackers().get(0));
-      peer.setId(Integer.toString(i).getBytes());
       peer.setMetainfo(metainfo);
       peers.add(peer);
     }
