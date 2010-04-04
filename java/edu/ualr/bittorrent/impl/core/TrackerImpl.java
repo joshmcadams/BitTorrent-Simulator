@@ -1,7 +1,9 @@
 package edu.ualr.bittorrent.impl.core;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
@@ -30,13 +32,32 @@ public class TrackerImpl implements Tracker {
   public synchronized TrackerResponse get(TrackerRequest request) {
     Preconditions.checkNotNull(request);
     Peer peer = request.getPeer();
-
     rememberPeer(peer);
-
-    return buildResponse();
+    return buildResponse(request);
   }
 
-  private TrackerResponse buildResponse() {
+  private class SwarmInfo {
+    private final byte[] infoHash;
+
+    SwarmInfo(byte[] infoHash) {
+     this.infoHash = Preconditions.checkNotNull(infoHash);
+    }
+  }
+
+  private final Map<byte[], SwarmInfo> swarmInfoMap = new ConcurrentHashMap<byte[], SwarmInfo>();
+
+  private SwarmInfo getSwarmInfo(byte[] infoHash) {
+    if (swarmInfoMap.containsKey(infoHash)) {
+      return swarmInfoMap.get(infoHash);
+    }
+    SwarmInfo swarmInfo = new SwarmInfo(infoHash);
+    swarmInfoMap.put(infoHash, swarmInfo);
+    return swarmInfo;
+  }
+
+  private TrackerResponse buildResponse(TrackerRequest request) {
+    SwarmInfo swarmInfo = getSwarmInfo(request.getInfoHash());
+
     TrackerResponse response = new TrackerResponseImpl(
         id,
         ImmutableList.copyOf(peers),
