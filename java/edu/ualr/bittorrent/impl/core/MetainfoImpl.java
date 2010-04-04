@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.joda.time.Instant;
 
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
@@ -32,7 +33,25 @@ public class MetainfoImpl implements Metainfo {
 
     this.infoHash =
       MessageDigest.getInstance("SHA").digest(UUID.randomUUID().toString().getBytes());
-}
+  }
+
+  @Override
+  public boolean equals(Object object) {
+    if (!(object instanceof MetainfoImpl)) {
+      return false;
+    }
+    MetainfoImpl metainfo = (MetainfoImpl) object;
+    return Objects.equal(trackers, metainfo.trackers) &&
+           Objects.equal(infoHash, metainfo.infoHash) &&
+           Objects.equal(pieces, metainfo.pieces) &&
+           Objects.equal(pieceLength, metainfo.pieceLength) &&
+           Objects.equal(files, metainfo.files);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(infoHash, trackers, pieceLength, pieces, files);
+  }
 
   public String getComment() {
     return null; /* optional field that we are opting out of providing */

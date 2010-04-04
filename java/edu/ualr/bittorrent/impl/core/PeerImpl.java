@@ -36,7 +36,7 @@ public class PeerImpl implements Peer {
       return false;
     }
     PeerImpl peer = (PeerImpl) object;
-    return this.id.equals(peer.id) && this.metainfo.equals(peer.metainfo);
+    return Objects.equal(id, peer.id) && Objects.equal(metainfo, peer.metainfo);
   }
 
   @Override
