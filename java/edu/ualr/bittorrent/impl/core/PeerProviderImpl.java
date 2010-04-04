@@ -4,18 +4,25 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.PeerProvider;
-import edu.ualr.bittorrent.interfaces.Tracker;
 
 public class PeerProviderImpl implements PeerProvider {
   private static Logger logger = Logger.getLogger(PeerProviderImpl.class);
-  private static boolean alreadyCalled = false;
-  public ImmutableList<Peer> addPeers(Tracker tracker, Metainfo metainfo) {
+
+  private boolean alreadyCalled = false;
+  private final Metainfo metainfo;
+
+  public PeerProviderImpl(Metainfo metainfo) {
+    this.metainfo = Preconditions.checkNotNull(metainfo);
+  }
+
+  public ImmutableList<Peer> addPeers() {
     if (alreadyCalled) {
       return null;
     }
@@ -24,7 +31,7 @@ public class PeerProviderImpl implements PeerProvider {
     logger.info("adding peers");
     for (int i = 0; i < 10; i++) {
       Peer peer = new PeerImpl();
-      peer.setTracker(tracker);
+      peer.setTracker(metainfo.getTrackers().get(0));
       peer.setId(Integer.toString(i).getBytes());
       peer.setMetainfo(metainfo);
       peers.add(peer);

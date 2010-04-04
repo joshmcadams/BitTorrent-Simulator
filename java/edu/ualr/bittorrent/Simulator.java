@@ -20,14 +20,12 @@ import edu.ualr.bittorrent.interfaces.PeerProvider;
 import edu.ualr.bittorrent.interfaces.Tracker;
 
 public class Simulator {
-  private final Tracker tracker;
   private final PeerProvider peerProvider;
   private final Metainfo metainfo;
   private final List<Peer> peers = Lists.newArrayList();
   private final static Logger logger = Logger.getLogger(Simulator.class);
 
-  public Simulator(Tracker tracker, PeerProvider peerProvider, Metainfo metainfo) {
-    this.tracker = Preconditions.checkNotNull(tracker);
+  public Simulator(PeerProvider peerProvider, Metainfo metainfo) {
     this.peerProvider = Preconditions.checkNotNull(peerProvider);
     this.metainfo = Preconditions.checkNotNull(metainfo);
   }
@@ -40,7 +38,7 @@ public class Simulator {
     Executor executor = Executors.newFixedThreadPool(100);
 
     while (System.currentTimeMillis() - startTime < millisecondsToRun) {
-      ImmutableList<Peer> newPeers = peerProvider.addPeers(tracker, metainfo);
+      ImmutableList<Peer> newPeers = peerProvider.addPeers();
       if (newPeers == null || newPeers.size() == 0) {
         continue;
       }
@@ -60,11 +58,11 @@ public class Simulator {
     ImmutableList<String> pieces = ImmutableList.of("12345678901234567890");
     Metainfo.File file = new MetainfoImpl.FileImpl(new Long(10L), ImmutableList.of("x.txt"));
     ImmutableList<Metainfo.File> files = ImmutableList.of(file);
+    Metainfo metainfo = new MetainfoImpl(trackers, pieces, new Long(10L), files);
 
     new Simulator(
-        tracker,
-        new PeerProviderImpl(),
-        new MetainfoImpl(trackers, pieces, new Long(10L), files)
+        new PeerProviderImpl(metainfo),
+        metainfo
         ).runExperiment(1000);
   }
 }
