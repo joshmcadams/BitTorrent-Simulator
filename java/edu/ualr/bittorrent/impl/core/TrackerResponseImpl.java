@@ -16,4 +16,39 @@ public class TrackerResponseImpl implements TrackerResponse {
   public ImmutableList<Peer> getPeers() {
     return peers;
   }
+
+  public Long getComplete() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public String getFailureReason() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public Long getIncomplete() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public Integer getInterval() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public Integer getMinInterval() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public String getTrackerId() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public String getWarningMessage() {
+    // TODO Auto-generated method stub
+    return null;
+  }
 }

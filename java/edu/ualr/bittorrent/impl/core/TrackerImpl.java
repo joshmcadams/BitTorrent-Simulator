@@ -40,4 +40,9 @@ public class TrackerImpl implements Tracker {
      * background, this is your hook.
      */
   }
+
+  public byte[] getId() {
+    // TODO Auto-generated method stub
+    return null;
+  }
 }

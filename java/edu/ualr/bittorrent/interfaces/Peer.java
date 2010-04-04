@@ -5,6 +5,7 @@ import edu.ualr.bittorrent.PeerMessage;
 
 public interface Peer extends Runnable {
   public void setId(byte[] id);
+
   public byte[] getId();
 
   public void setTracker(Tracker tracker);
