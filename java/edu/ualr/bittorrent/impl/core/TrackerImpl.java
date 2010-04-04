@@ -33,7 +33,21 @@ public class TrackerImpl implements Tracker {
 
     rememberPeer(peer);
 
-    return new TrackerResponseImpl(ImmutableList.copyOf(peers));
+    return buildResponse();
+  }
+
+  private TrackerResponse buildResponse() {
+    TrackerResponse response = new TrackerResponseImpl(
+        id,
+        ImmutableList.copyOf(peers),
+        0L, // TODO: complete
+        0L, // TODO: incomplete
+        0,  // TODO: interval
+        null,
+        null,
+        null
+    );
+    return response;
   }
 
   private void rememberPeer(Peer peer) {
@@ -49,9 +63,5 @@ public class TrackerImpl implements Tracker {
      * by the peers. If the experiment calls for the tracker to actively do something in the
      * background, this is your hook.
      */
-  }
-
-  public byte[] getId() {
-    return id;
   }
 }

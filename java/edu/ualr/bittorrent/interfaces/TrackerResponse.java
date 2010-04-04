@@ -7,7 +7,7 @@ public interface TrackerResponse {
   public String getWarningMessage();
   public Integer getInterval();
   public Integer getMinInterval();
-  public String getTrackerId();
+  public byte[] getTrackerId();
   public Long getComplete();
   public Long getIncomplete();
   public ImmutableList<Peer> getPeers();

@@ -7,10 +7,32 @@ import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
 
 public class TrackerResponseImpl implements TrackerResponse {
-  ImmutableList<Peer> peers;
+  final byte[] trackerId;
+  final ImmutableList<Peer> peers;
+  final Long complete;
+  final Long incomplete;
+  final Integer interval;
+  final Integer minInterval;
+  final String failureReason;
+  final String warningMessage;
 
-  public TrackerResponseImpl(ImmutableList<Peer> peers) {
+  public TrackerResponseImpl(
+      byte[] trackerId,
+      ImmutableList<Peer> peers,
+      Long complete,
+      Long incomplete,
+      Integer interval,
+      Integer minInterval,
+      String failureReason,
+      String warningMessage) {
+    this.trackerId = Preconditions.checkNotNull(trackerId);
     this.peers = Preconditions.checkNotNull(peers);
+    this.complete = Preconditions.checkNotNull(complete);
+    this.incomplete = Preconditions.checkNotNull(incomplete);
+    this.interval = Preconditions.checkNotNull(interval);
+    this.minInterval = minInterval;
+    this.failureReason = failureReason;
+    this.warningMessage = warningMessage;
   }
 
   public ImmutableList<Peer> getPeers() {
@@ -18,37 +40,30 @@ public class TrackerResponseImpl implements TrackerResponse {
   }
 
   public Long getComplete() {
-    // TODO Auto-generated method stub
-    return null;
+    return complete;
   }
 
   public String getFailureReason() {
-    // TODO Auto-generated method stub
-    return null;
+    return failureReason;
   }
 
   public Long getIncomplete() {
-    // TODO Auto-generated method stub
-    return null;
+    return incomplete;
   }
 
   public Integer getInterval() {
-    // TODO Auto-generated method stub
-    return null;
+    return interval;
   }
 
   public Integer getMinInterval() {
-    // TODO Auto-generated method stub
-    return null;
+    return minInterval;
   }
 
-  public String getTrackerId() {
-    // TODO Auto-generated method stub
-    return null;
+  public byte[] getTrackerId() {
+    return trackerId;
   }
 
   public String getWarningMessage() {
-    // TODO Auto-generated method stub
-    return null;
+    return warningMessage;
   }
 }
