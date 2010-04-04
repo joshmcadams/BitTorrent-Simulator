@@ -6,6 +6,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
+import org.joda.time.Instant;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -37,10 +38,25 @@ public class TrackerImpl implements Tracker {
   }
 
   private class SwarmInfo {
-    private final byte[] infoHash;
+    private final Map<byte[], Instant> leeches = new ConcurrentHashMap<byte[], Instant>();
+    private final Map<byte[], Instant> seeders = new ConcurrentHashMap<byte[], Instant>();
 
-    SwarmInfo(byte[] infoHash) {
-     this.infoHash = Preconditions.checkNotNull(infoHash);
+    void logRequest(TrackerRequest request) {
+      if (request.getLeft() == 0) {
+        leeches.remove(request.getPeer());
+        seeders.put(request.getPeer().getId(), new Instant());
+      } else {
+        seeders.remove(request.getPeer());
+        leeches.put(request.getPeer().getId(), new Instant());
+      }
+    }
+
+    int getSeederCount() {
+      return seeders.size();
+    }
+
+    int getLeechCount() {
+      return leeches.size();
     }
   }
 
@@ -50,19 +66,20 @@ public class TrackerImpl implements Tracker {
     if (swarmInfoMap.containsKey(infoHash)) {
       return swarmInfoMap.get(infoHash);
     }
-    SwarmInfo swarmInfo = new SwarmInfo(infoHash);
+    SwarmInfo swarmInfo = new SwarmInfo();
     swarmInfoMap.put(infoHash, swarmInfo);
     return swarmInfo;
   }
 
   private TrackerResponse buildResponse(TrackerRequest request) {
     SwarmInfo swarmInfo = getSwarmInfo(request.getInfoHash());
+    swarmInfo.logRequest(request);
 
     TrackerResponse response = new TrackerResponseImpl(
         id,
         ImmutableList.copyOf(peers),
-        0L, // TODO: complete
-        0L, // TODO: incomplete
+        swarmInfo.getSeederCount(),
+        swarmInfo.getLeechCount(),
         0   // TODO: interval
     );
     return response;

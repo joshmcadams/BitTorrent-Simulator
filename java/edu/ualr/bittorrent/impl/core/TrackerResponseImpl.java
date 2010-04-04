@@ -9,9 +9,9 @@ import edu.ualr.bittorrent.interfaces.TrackerResponse;
 public class TrackerResponseImpl implements TrackerResponse {
   final byte[] trackerId;
   final ImmutableList<Peer> peers;
-  final Long complete;
-  final Long incomplete;
-  final Integer interval;
+  final int complete;
+  final int incomplete;
+  final int interval;
   final Integer minInterval;
   final String failureReason;
   final String warningMessage;
@@ -19,18 +19,18 @@ public class TrackerResponseImpl implements TrackerResponse {
   public TrackerResponseImpl(
       byte[] trackerId,
       ImmutableList<Peer> peers,
-      Long complete,
-      Long incomplete,
-      Integer interval) {
+      int complete,
+      int incomplete,
+      int interval) {
     this(trackerId, peers, complete, incomplete, interval, null, null, null);
   }
 
   public TrackerResponseImpl(
       byte[] trackerId,
       ImmutableList<Peer> peers,
-      Long complete,
-      Long incomplete,
-      Integer interval,
+      int complete,
+      int incomplete,
+      int interval,
       Integer minInterval,
       String failureReason,
       String warningMessage) {
@@ -48,7 +48,7 @@ public class TrackerResponseImpl implements TrackerResponse {
     return peers;
   }
 
-  public Long getComplete() {
+  public int getComplete() {
     return complete;
   }
 
@@ -56,11 +56,11 @@ public class TrackerResponseImpl implements TrackerResponse {
     return failureReason;
   }
 
-  public Long getIncomplete() {
+  public int getIncomplete() {
     return incomplete;
   }
 
-  public Integer getInterval() {
+  public int getInterval() {
     return interval;
   }
 
