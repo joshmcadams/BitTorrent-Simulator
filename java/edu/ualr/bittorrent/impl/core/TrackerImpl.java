@@ -39,6 +39,7 @@ public class TrackerImpl implements Tracker {
   public synchronized TrackerResponse get(TrackerRequest request) {
     Preconditions.checkNotNull(request);
     Peer peer = request.getPeer();
+    logger.info(String.format("Peer %s made a request to the tracker", peer.getId()));
     rememberPeer(peer);
     return buildResponse(request);
   }

@@ -9,18 +9,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 import edu.ualr.bittorrent.PeerMessage;
-import edu.ualr.bittorrent.impl.core.messages.BitFieldImpl;
-import edu.ualr.bittorrent.impl.core.messages.CancelImpl;
-import edu.ualr.bittorrent.impl.core.messages.ChokeImpl;
-import edu.ualr.bittorrent.impl.core.messages.HandshakeImpl;
-import edu.ualr.bittorrent.impl.core.messages.HaveImpl;
-import edu.ualr.bittorrent.impl.core.messages.InterestedImpl;
-import edu.ualr.bittorrent.impl.core.messages.KeepAliveImpl;
-import edu.ualr.bittorrent.impl.core.messages.NotInterestedImpl;
-import edu.ualr.bittorrent.impl.core.messages.PieceImpl;
-import edu.ualr.bittorrent.impl.core.messages.PortImpl;
-import edu.ualr.bittorrent.impl.core.messages.RequestImpl;
-import edu.ualr.bittorrent.impl.core.messages.UnchokeImpl;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.Tracker;
@@ -55,6 +43,7 @@ public class PeerImpl implements Peer {
     Preconditions.checkNotNull(metainfo);
     logger.info(String.format("Peer %s running", new String(id)));
     while (true) {
+      logger.info(String.format("Peer %s contacting tracker", new String(id)));
       TrackerResponse response = tracker.get(
           new TrackerRequestImpl(
               this,
@@ -63,20 +52,20 @@ public class PeerImpl implements Peer {
               0L, // TODO: uploaded
               0L  // TODO: left
           ));
+      logger.info(String.format("Peer %s received response from tracker", new String(id)));
       for (Peer peer : response.getPeers()) {
-        peer.message(new BitFieldImpl(this));
-        peer.message(new CancelImpl(this));
-        peer.message(new ChokeImpl(this));
-        peer.message(
-            new HandshakeImpl("12345678901234567890".getBytes(), this));
-        peer.message(new HaveImpl(this));
-        peer.message(new InterestedImpl(this));
-        peer.message(new KeepAliveImpl(this));
-        peer.message(new NotInterestedImpl(this));
-        peer.message(new PieceImpl(this));
-        peer.message(new PortImpl(this));
-        peer.message(new RequestImpl(this));
-        peer.message(new UnchokeImpl(this));
+     // TODO: peer.message(new BitFieldImpl(this));
+     // TODO: peer.message(new CancelImpl(this));
+     // TODO: peer.message(new ChokeImpl(this));
+     // TODO: peer.message(new HandshakeImpl("12345678901234567890".getBytes(), this));
+     // TODO: peer.message(new HaveImpl(this));
+     // TODO: peer.message(new InterestedImpl(this));
+     // TODO: peer.message(new KeepAliveImpl(this));
+     // TODO: peer.message(new NotInterestedImpl(this));
+     // TODO: peer.message(new PieceImpl(this));
+     // TODO: peer.message(new PortImpl(this));
+     // TODO: peer.message(new RequestImpl(this));
+     // TODO: peer.message(new UnchokeImpl(this));
       }
       break;
     }
