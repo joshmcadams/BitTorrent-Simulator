@@ -1,5 +1,7 @@
 package edu.ualr.bittorrent.impl.core;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -21,13 +23,17 @@ public class TrackerImpl implements Tracker {
   List<Peer> peers = Lists.newArrayList();
   private static final Logger logger = Logger.getLogger(PeerImpl.class);
   private final byte[] id;
+  private final int interval;
+  private static final int PEER_REQUEST_LIMIT = 50;
+  private static final double SEED_PROBABILITY = 0.05;
 
-  public TrackerImpl() {
-    this(UUID.randomUUID().toString().getBytes());
+  public TrackerImpl(int interval) {
+    this(UUID.randomUUID().toString().getBytes(), interval);
   }
 
-  public TrackerImpl(byte[] id) {
+  public TrackerImpl(byte[] id, int interval) {
     this.id = Preconditions.checkNotNull(id);
+    this.interval = interval;
   }
 
   public synchronized TrackerResponse get(TrackerRequest request) {
@@ -38,17 +44,51 @@ public class TrackerImpl implements Tracker {
   }
 
   private class SwarmInfo {
-    private final Map<byte[], Instant> leeches = new ConcurrentHashMap<byte[], Instant>();
-    private final Map<byte[], Instant> seeders = new ConcurrentHashMap<byte[], Instant>();
+    private final Map<Peer, Instant> leeches = new ConcurrentHashMap<Peer, Instant>();
+    private final Map<Peer, Instant> seeders = new ConcurrentHashMap<Peer, Instant>();
 
     void logRequest(TrackerRequest request) {
       if (request.getLeft() == 0) {
         leeches.remove(request.getPeer());
-        seeders.put(request.getPeer().getId(), new Instant());
+        seeders.put(request.getPeer(), new Instant());
       } else {
         seeders.remove(request.getPeer());
-        leeches.put(request.getPeer().getId(), new Instant());
+        leeches.put(request.getPeer(), new Instant());
       }
+    }
+
+    List<Peer> getListOfPeers(TrackerRequest request) {
+      final int listSize =
+        request.getNumWant() != null && PEER_REQUEST_LIMIT > request.getNumWant() ?
+        request.getNumWant() : PEER_REQUEST_LIMIT;
+
+      Map<Peer, Integer> peers = new HashMap<Peer, Integer>(listSize);
+
+      List<Peer> seederKeys = new ArrayList<Peer>(seeders.size());
+      for (Peer key : seeders.keySet()) {
+        seederKeys.add(key);
+      }
+
+      List<Peer> leechKeys = new ArrayList<Peer>(leeches.size());
+      for (Peer key : leeches.keySet()) {
+        leechKeys.add(key);
+      }
+
+      while(peers.size() < PEER_REQUEST_LIMIT) {
+        Peer peer;
+        if (Math.random() < SEED_PROBABILITY && seederKeys.size() > 0) {
+          peer = seederKeys.get((int) (Math.random() * (seederKeys.size() - 1)));
+        } else {
+          peer = seederKeys.get((int) (Math.random() * (seederKeys.size() - 1)));
+        }
+
+        if (!peer.equals(request.getPeer())) {
+          peers.put(peer, 1);
+        }
+      }
+
+      logger.info(String.format("Returning a list of %d peers", peers.keySet().size()));
+      return ImmutableList.copyOf(peers.keySet());
     }
 
     int getSeederCount() {
@@ -74,13 +114,12 @@ public class TrackerImpl implements Tracker {
   private TrackerResponse buildResponse(TrackerRequest request) {
     SwarmInfo swarmInfo = getSwarmInfo(request.getInfoHash());
     swarmInfo.logRequest(request);
-
     TrackerResponse response = new TrackerResponseImpl(
         id,
-        ImmutableList.copyOf(peers),
+        ImmutableList.copyOf(swarmInfo.getListOfPeers(request)),
         swarmInfo.getSeederCount(),
         swarmInfo.getLeechCount(),
-        0   // TODO: interval
+        interval
     );
     return response;
   }

@@ -98,7 +98,7 @@ public class Simulator {
 
   public static void main(String[] args) throws NoSuchAlgorithmException {
     BasicConfigurator.configure();
-    Tracker tracker = new TrackerImpl();
+    Tracker tracker = new TrackerImpl(50);
     ImmutableList<Tracker> trackers = ImmutableList.of(tracker);
     ImmutableList<String> pieces = ImmutableList.of("12345678901234567890");
     Metainfo.File file = new MetainfoImpl.FileImpl(new Long(10L), ImmutableList.of("x.txt"));
