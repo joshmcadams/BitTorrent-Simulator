@@ -21,4 +21,12 @@ public class TrackerImpl implements Tracker {
   public synchronized void registerPeer(Peer peer) {
     peers.add(Preconditions.checkNotNull(peer));
   }
+
+  public void run() {
+    /*
+     * Default tracker doesn't do anything in its thread and instead relies on synchronized access
+     * by the peers. If the experiment calls for the tracker to actively do something in the
+     * background, this is your hook.
+     */
+  }
 }

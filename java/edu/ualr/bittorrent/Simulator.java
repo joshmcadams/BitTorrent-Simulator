@@ -1,8 +1,9 @@
 package edu.ualr.bittorrent;
 
 import java.util.List;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
@@ -24,31 +25,74 @@ public class Simulator {
   private final Metainfo metainfo;
   private final List<Peer> peers = Lists.newArrayList();
   private final static Logger logger = Logger.getLogger(Simulator.class);
+  private final ExecutorService executor;
 
-  public Simulator(PeerProvider peerProvider, Metainfo metainfo) {
+  public Simulator(PeerProvider peerProvider, Metainfo metainfo, Integer threadCount) {
     this.peerProvider = Preconditions.checkNotNull(peerProvider);
     this.metainfo = Preconditions.checkNotNull(metainfo);
+    this.executor = Executors.newFixedThreadPool(Preconditions.checkNotNull(threadCount));
   }
 
-  public void runExperiment(long millisecondsToRun) {
-    logger.info("Simulator Running");
+  private class ExperimentTerminator implements Runnable {
+    private final Long millisecondsToRun;
 
-    long startTime = System.currentTimeMillis();
+    public ExperimentTerminator(Long millisecondsToRun) {
+      this.millisecondsToRun = Preconditions.checkNotNull(millisecondsToRun);
+    }
 
-    Executor executor = Executors.newFixedThreadPool(100);
-
-    while (System.currentTimeMillis() - startTime < millisecondsToRun) {
-      ImmutableList<Peer> newPeers = peerProvider.addPeers();
-      if (newPeers == null || newPeers.size() == 0) {
-        continue;
+    public void run() {
+      try {
+        logger.info(String.format("Experiment limited to %d microseconds", millisecondsToRun));
+        executor.awaitTermination(millisecondsToRun, TimeUnit.MILLISECONDS);
+        if (!executor.isShutdown()) {
+          logger.info("Stopping experiment before all threads are complete");
+          executor.shutdown();
+        }
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
       }
+    }
+  }
+
+  public void runExperiment(Long millisecondsToRun) {
+    logger.info("Experiment starting");
+
+    setTimeout(millisecondsToRun);
+
+    try {
+      spawnTrackers();
+      spawnPeers();
+    } finally {
+      executor.shutdown();
+    }
+  }
+
+  private void setTimeout(Long millisecondsToRun) {
+    if (millisecondsToRun != null) {
+      executor.execute(new ExperimentTerminator(millisecondsToRun));
+    }
+  }
+
+  private void spawnTrackers() {
+    for (Tracker tracker : metainfo.getTrackers()) {
+      if (executor.isShutdown()) {
+        return;
+      }
+      executor.execute(tracker);
+    }
+  }
+
+  private void spawnPeers() {
+    ImmutableList<Peer> newPeers;
+    while ((newPeers = peerProvider.addPeers()) != null) {
       peers.addAll(newPeers);
       for (Peer peer : newPeers) {
+        if (executor.isShutdown()) {
+          return;
+        }
         executor.execute(peer);
       }
     }
-
-    logger.info("Simulator Stopping");
   }
 
   public static void main(String[] args) {
@@ -62,7 +106,7 @@ public class Simulator {
 
     new Simulator(
         new PeerProviderImpl(metainfo),
-        metainfo
-        ).runExperiment(1000);
+        metainfo, 100
+        ).runExperiment(null);
   }
 }
