@@ -45,7 +45,6 @@ public class PeerImpl implements Peer {
     Preconditions.checkNotNull(id);
     Preconditions.checkNotNull(metainfo);
     logger.info(String.format("Peer %s running", new String(id)));
-    tracker.registerPeer(this);
     while (true) {
       TrackerResponse response = tracker.get(new TrackerRequestImpl(this));
       for (Peer peer : response.getPeers()) {
