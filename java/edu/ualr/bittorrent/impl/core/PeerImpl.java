@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
@@ -28,6 +29,20 @@ public class PeerImpl implements Peer {
   private final AtomicInteger downloaded = new AtomicInteger();
   private final AtomicInteger uploaded = new AtomicInteger();
   private final AtomicInteger remaining = new AtomicInteger();
+
+  @Override
+  public boolean equals(Object object) {
+    if (!(object instanceof PeerImpl)) {
+      return false;
+    }
+    PeerImpl peer = (PeerImpl) object;
+    return this.id.equals(peer.id) && this.metainfo.equals(peer.metainfo);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(this.id, this.metainfo);
+  }
 
   public PeerImpl(byte[] id) {
     this.id = Preconditions.checkNotNull(id);
