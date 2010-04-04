@@ -9,9 +9,9 @@ public interface TrackerRequest extends HasPeer {
   };
   public byte[] getInfoHash();
   public Integer getPort();
-  public Long getUploaded();
-  public Long getDownloaded();
-  public Long getLeft();
+  public int getUploaded();
+  public int getDownloaded();
+  public int getLeft();
   public Boolean acceptsCompactResponses();
   public Boolean omitPeerId();
   public Event getEvent();

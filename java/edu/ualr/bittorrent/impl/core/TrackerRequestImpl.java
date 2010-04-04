@@ -8,14 +8,14 @@ import edu.ualr.bittorrent.interfaces.TrackerRequest;
 public class TrackerRequestImpl implements TrackerRequest{
   private final Peer peer;
   private final Boolean acceptsCompactResponse;
-  private final Long downloaded;
-  private final Long uploaded;
+  private final int downloaded;
+  private final int uploaded;
   private final Event event;
   private final byte[] infoHash;
   private final String ip;
   private final Integer port;
   private final String key;
-  private final Long left;
+  private final int left;
   private final Integer numWant;
   private final byte[] trackerId;
   private final Boolean omitPeerId;
@@ -23,9 +23,9 @@ public class TrackerRequestImpl implements TrackerRequest{
   public TrackerRequestImpl(
       Peer peer,
       byte[] infoHash,
-      Long downloaded,
-      Long uploaded,
-      Long left
+      int downloaded,
+      int uploaded,
+      int left
   ) {
     this(peer, infoHash, downloaded, uploaded, left,
         null, null, null, null, null, null, null, null);
@@ -34,9 +34,9 @@ public class TrackerRequestImpl implements TrackerRequest{
   public TrackerRequestImpl(
       Peer peer,
       byte[] infoHash,
-      Long downloaded,
-      Long uploaded,
-      Long left,
+      int downloaded,
+      int uploaded,
+      int left,
       Boolean acceptsCompactResponse,
       Event event,
       String ip,
@@ -69,7 +69,7 @@ public class TrackerRequestImpl implements TrackerRequest{
     return acceptsCompactResponse;
   }
 
-  public Long getDownloaded() {
+  public int getDownloaded() {
     return downloaded;
   }
 
@@ -89,7 +89,7 @@ public class TrackerRequestImpl implements TrackerRequest{
     return key;
   }
 
-  public Long getLeft() {
+  public int getLeft() {
     return left;
   }
 
@@ -105,7 +105,7 @@ public class TrackerRequestImpl implements TrackerRequest{
     return trackerId;
   }
 
-  public Long getUploaded() {
+  public int getUploaded() {
     return uploaded;
   }
 
