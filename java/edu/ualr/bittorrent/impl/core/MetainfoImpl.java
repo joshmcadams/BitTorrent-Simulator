@@ -1,5 +1,9 @@
 package edu.ualr.bittorrent.impl.core;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.UUID;
+
 import org.joda.time.Instant;
 
 import com.google.common.base.Preconditions;
@@ -13,9 +17,10 @@ public class MetainfoImpl implements Metainfo {
   final ImmutableList<String> pieces;
   final ImmutableList<File> files;
   final Long pieceLength;
+  final byte[] infoHash;
 
   public MetainfoImpl(ImmutableList<Tracker> trackers, ImmutableList<String> pieces,
-      Long pieceLength, ImmutableList<File> files) {
+      Long pieceLength, ImmutableList<File> files) throws NoSuchAlgorithmException {
     this.trackers = Preconditions.checkNotNull(trackers);
     this.pieces = Preconditions.checkNotNull(pieces);
     this.pieceLength = Preconditions.checkNotNull(pieceLength);
@@ -24,6 +29,9 @@ public class MetainfoImpl implements Metainfo {
     Preconditions.checkArgument(trackers.size() > 0, "At least one tracker is required");
     Preconditions.checkArgument(pieces.size() > 0, "At least one piece is required");
     Preconditions.checkArgument(files.size() > 0, "At least one file is required");
+
+    this.infoHash =
+      MessageDigest.getInstance("SHA").digest(UUID.randomUUID().toString().getBytes());
 }
 
   public String getComment() {
@@ -40,6 +48,10 @@ public class MetainfoImpl implements Metainfo {
 
   public String getEncoding() {
     return null; /* optional field that we are opting out of providing */
+  }
+
+  public byte[] getInfoHash() {
+    return infoHash;
   }
 
   public ImmutableList<File> getFiles() {
@@ -101,6 +113,5 @@ public class MetainfoImpl implements Metainfo {
     public ImmutableList<String> getName() {
       return name;
     }
-
   }
 }

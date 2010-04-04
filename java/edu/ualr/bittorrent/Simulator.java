@@ -1,5 +1,6 @@
 package edu.ualr.bittorrent;
 
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -95,7 +96,7 @@ public class Simulator {
     }
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws NoSuchAlgorithmException {
     BasicConfigurator.configure();
     Tracker tracker = new TrackerImpl();
     ImmutableList<Tracker> trackers = ImmutableList.of(tracker);

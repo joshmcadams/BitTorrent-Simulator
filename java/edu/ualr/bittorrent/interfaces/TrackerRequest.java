@@ -8,7 +8,6 @@ public interface TrackerRequest extends HasPeer {
     COMPLETED
   };
   public byte[] getInfoHash();
-  public byte[] getPeerId();
   public Integer getPort();
   public Long getUploaded();
   public Long getDownloaded();
@@ -19,5 +18,5 @@ public interface TrackerRequest extends HasPeer {
   public String getIp();
   public Integer getNumWant();
   public String getKey();
-  public String getTrackerId();
+  public byte[] getTrackerId();
 }

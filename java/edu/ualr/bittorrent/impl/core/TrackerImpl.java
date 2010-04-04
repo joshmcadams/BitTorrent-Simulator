@@ -42,10 +42,7 @@ public class TrackerImpl implements Tracker {
         ImmutableList.copyOf(peers),
         0L, // TODO: complete
         0L, // TODO: incomplete
-        0,  // TODO: interval
-        null,
-        null,
-        null
+        0   // TODO: interval
     );
     return response;
   }

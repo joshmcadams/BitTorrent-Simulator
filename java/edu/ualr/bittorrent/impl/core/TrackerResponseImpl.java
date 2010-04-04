@@ -21,6 +21,15 @@ public class TrackerResponseImpl implements TrackerResponse {
       ImmutableList<Peer> peers,
       Long complete,
       Long incomplete,
+      Integer interval) {
+    this(trackerId, peers, complete, incomplete, interval, null, null, null);
+  }
+
+  public TrackerResponseImpl(
+      byte[] trackerId,
+      ImmutableList<Peer> peers,
+      Long complete,
+      Long incomplete,
       Integer interval,
       Integer minInterval,
       String failureReason,

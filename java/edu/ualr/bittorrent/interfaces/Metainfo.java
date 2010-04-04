@@ -57,6 +57,7 @@ public interface Metainfo {
    * is just a simulator, there is no need to actually pass around the info, so it will not be
    * available; however, the contents of the hash will be represented as accessor methods.
    */
+  public byte[] getInfoHash();
 
   /**
    * Length of chunks of data used to calculate pieces. This corresponds with the 'piece length'
@@ -64,7 +65,7 @@ public interface Metainfo {
    *
    * @return length of data chunks used to calculate piece signatures
    */
-  Long getPieceLength();
+  public Long getPieceLength();
 
   /**
    * Get a list of strings that represent the piece signatures for the torrent. This corresponds
@@ -72,7 +73,7 @@ public interface Metainfo {
    *
    * @return list of pieces
    */
-  ImmutableList<String> getPieces();
+  public ImmutableList<String> getPieces();
 
   /**
    * Optional indicator that tells clients that this torrent should be shared under the umbrella
@@ -81,7 +82,7 @@ public interface Metainfo {
    *
    * @return numeric privacy indicator; typically 0 for non-private and 1 for private
    */
-  Integer getPrivate();
+  public Integer getPrivate();
 
   /**
    * Interface for representing logical files in the torrent. For a single file torrent, the
@@ -99,7 +100,7 @@ public interface Metainfo {
      *
      * @return the name of the file (possibly with a path)
      */
-    ImmutableList<String> getName();
+    public ImmutableList<String> getName();
 
     /**
      * Get the length of the file. This corresponds with the 'length' field of the info hash in a
@@ -108,7 +109,7 @@ public interface Metainfo {
      *
      * @return the length of the file
      */
-    Long getLength();
+    public Long getLength();
 
     /**
      * Optional MD5 signature for the file. This corresponds with the 'md5sum' field of the info
@@ -117,7 +118,7 @@ public interface Metainfo {
      *
      * @return MD5 signature of the file
      */
-     String getMd5Sum();
+    public String getMd5Sum();
   }
 
   /**
@@ -132,7 +133,7 @@ public interface Metainfo {
    *
    * @return file path and possibly name
    */
-  ImmutableList<String> getName();
+  public ImmutableList<String> getName();
 
   /**
    * For a single-file torrent, this will be the length of the file. For a mulit-file torrent,
@@ -141,7 +142,7 @@ public interface Metainfo {
    *
    * @return required file length for a single-file torrent; null for a multi-file torrent
    */
-  Long getLength();
+  public Long getLength();
 
   /**
    * For a single-file torrent, this will be the optional MD5 signature of the file. For a
@@ -150,7 +151,7 @@ public interface Metainfo {
    *
    * @return MD5 signature for a single-file torrent; null for a multi-file torrent
    */
-  String getMd5Sum();
+  public String getMd5Sum();
 
   /**
    * Return a list of {@link File} objects found in this torrent. For a single file torrent, there
@@ -160,5 +161,5 @@ public interface Metainfo {
    *
    * @return list of files represented by this torrent
    */
-  ImmutableList<File> getFiles();
+  public ImmutableList<File> getFiles();
 }

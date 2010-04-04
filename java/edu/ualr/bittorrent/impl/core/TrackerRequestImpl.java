@@ -7,9 +7,58 @@ import edu.ualr.bittorrent.interfaces.TrackerRequest;
 
 public class TrackerRequestImpl implements TrackerRequest{
   private final Peer peer;
+  private final Boolean acceptsCompactResponse;
+  private final Long downloaded;
+  private final Long uploaded;
+  private final Event event;
+  private final byte[] infoHash;
+  private final String ip;
+  private final Integer port;
+  private final String key;
+  private final Long left;
+  private final Integer numWant;
+  private final byte[] trackerId;
+  private final Boolean omitPeerId;
 
-  TrackerRequestImpl(Peer peer) {
+  public TrackerRequestImpl(
+      Peer peer,
+      byte[] infoHash,
+      Long downloaded,
+      Long uploaded,
+      Long left
+  ) {
+    this(peer, infoHash, downloaded, uploaded, left,
+        null, null, null, null, null, null, null, null);
+  }
+
+  public TrackerRequestImpl(
+      Peer peer,
+      byte[] infoHash,
+      Long downloaded,
+      Long uploaded,
+      Long left,
+      Boolean acceptsCompactResponse,
+      Event event,
+      String ip,
+      Integer port,
+      String key,
+      Integer numWant,
+      byte[] trackerId,
+      Boolean omitPeerId
+  ) {
     this.peer = Preconditions.checkNotNull(peer);
+    this.infoHash = Preconditions.checkNotNull(infoHash);
+    this.downloaded = Preconditions.checkNotNull(downloaded);
+    this.uploaded = Preconditions.checkNotNull(uploaded);
+    this.left = Preconditions.checkNotNull(left);
+    this.acceptsCompactResponse = acceptsCompactResponse == null ? false : acceptsCompactResponse;
+    this.event = event;
+    this.ip = ip;
+    this.port = port;
+    this.key = key;
+    this.numWant = numWant;
+    this.trackerId = trackerId;
+    this.omitPeerId = omitPeerId;
   }
 
   public Peer getPeer() {
@@ -17,67 +66,50 @@ public class TrackerRequestImpl implements TrackerRequest{
   }
 
   public Boolean acceptsCompactResponses() {
-    // TODO Auto-generated method stub
-    return null;
+    return acceptsCompactResponse;
   }
 
   public Long getDownloaded() {
-    // TODO Auto-generated method stub
-    return null;
+    return downloaded;
   }
 
   public Event getEvent() {
-    // TODO Auto-generated method stub
-    return null;
+    return event;
   }
 
   public byte[] getInfoHash() {
-    // TODO Auto-generated method stub
-    return null;
+    return infoHash;
   }
 
   public String getIp() {
-    // TODO Auto-generated method stub
-    return null;
+    return ip;
   }
 
   public String getKey() {
-    // TODO Auto-generated method stub
-    return null;
+    return key;
   }
 
   public Long getLeft() {
-    // TODO Auto-generated method stub
-    return null;
+    return left;
   }
 
   public Integer getNumWant() {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  public byte[] getPeerId() {
-    // TODO Auto-generated method stub
-    return null;
+    return numWant;
   }
 
   public Integer getPort() {
-    // TODO Auto-generated method stub
-    return null;
+    return port;
   }
 
-  public String getTrackerId() {
-    // TODO Auto-generated method stub
-    return null;
+  public byte[] getTrackerId() {
+    return trackerId;
   }
 
   public Long getUploaded() {
-    // TODO Auto-generated method stub
-    return null;
+    return uploaded;
   }
 
   public Boolean omitPeerId() {
-    // TODO Auto-generated method stub
-    return null;
+    return omitPeerId;
   }
 }
