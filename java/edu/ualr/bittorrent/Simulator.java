@@ -107,7 +107,7 @@ public class Simulator {
 
     new Simulator(
         new PeerProviderImpl(metainfo),
-        metainfo, 100
+        metainfo, 1
         ).runExperiment(null);
   }
 }

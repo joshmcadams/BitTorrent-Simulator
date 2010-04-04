@@ -71,7 +71,9 @@ public class PeerImpl implements Peer {
         }
       }
       try {
+        logger.info("Sleeping for " + response.getInterval());
         Thread.sleep(response.getInterval());
+        logger.info("Awake from " + response.getInterval());
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
@@ -90,6 +92,7 @@ public class PeerImpl implements Peer {
     }
 
     public void run() {
+      logger.info("Peer talker manager started");
       for (Peer peer : peerMap.keySet()) {
         // TODO: add culling of dead peers
         if (!peerMap.get(peer)) {
@@ -110,6 +113,7 @@ public class PeerImpl implements Peer {
     }
 
     public void run() {
+      logger.info("Peer talker started");
       while (true) {
        // TODO: peer.message(new BitFieldImpl(this));
        // TODO: peer.message(new CancelImpl(this));
@@ -124,7 +128,9 @@ public class PeerImpl implements Peer {
        // TODO: peer.message(new RequestImpl(this));
        // TODO: peer.message(new UnchokeImpl(this));
         try {
-          Thread.sleep(10000);
+          logger.info("Sleeping");
+          Thread.sleep(100);
+          logger.info("Awake");
         } catch (InterruptedException e) {
           throw new RuntimeException(e);
         }
@@ -142,7 +148,6 @@ public class PeerImpl implements Peer {
     ExecutorService executor = Executors.newFixedThreadPool(10);
     executor.execute(new TrackerTalker(this, this.metainfo.getInfoHash()));
     executor.execute(new PeerTalkerManager(this, executor));
-
 
     PeerMessage<?> message = null;
     synchronized (messageQueue) {
