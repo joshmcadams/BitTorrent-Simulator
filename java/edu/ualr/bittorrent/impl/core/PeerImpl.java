@@ -15,10 +15,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 import edu.ualr.bittorrent.PeerMessage;
+import edu.ualr.bittorrent.impl.core.messages.ChokeImpl;
+import edu.ualr.bittorrent.impl.core.messages.UnchokeImpl;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.Tracker;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
+import edu.ualr.bittorrent.interfaces.messages.Choke;
+import edu.ualr.bittorrent.interfaces.messages.Unchoke;
 
 public class PeerImpl implements Peer {
   private Tracker tracker;
@@ -29,6 +33,8 @@ public class PeerImpl implements Peer {
   private final AtomicInteger downloaded = new AtomicInteger();
   private final AtomicInteger uploaded = new AtomicInteger();
   private final AtomicInteger remaining = new AtomicInteger();
+  private final Map<Integer, byte[]> pieces = new ConcurrentHashMap<Integer, byte[]>();
+  private final Map<Peer, Boolean> peerMap = new ConcurrentHashMap<Peer, Boolean>();
 
   @Override
   public boolean equals(Object object) {
@@ -98,8 +104,9 @@ public class PeerImpl implements Peer {
     }
   }
 
-  private final Map<Peer, Boolean> peerMap = new ConcurrentHashMap<Peer, Boolean>();
-
+  /**
+   * PeerTalkerManager
+   */
   private class PeerTalkerManager implements Runnable {
     private final Peer local;
     private final ExecutorService executor;
@@ -115,7 +122,9 @@ public class PeerImpl implements Peer {
         for (Peer peer : peerMap.keySet()) {
           // TODO: add culling of dead peers
           if (!peerMap.get(peer)) {
-            logger.info(String.format("Local peer %s adding remote peer %s", local, peer));
+            logger.info(String.format("Local peer %s adding remote peer %s",
+                new String(local.getId()),
+                new String(peer.getId())));
             executor.execute(new PeerTalker(local, peer));
             peerMap.put(peer, true);
           }
@@ -129,13 +138,24 @@ public class PeerImpl implements Peer {
     }
   }
 
+  /**
+   * PeerTalker
+   */
   private class PeerTalker implements Runnable {
-    private Peer local;
-    private Peer remote;
+    private final Peer local;
+    private final Peer remote;
 
     PeerTalker(Peer local, Peer remote) {
-      local = Preconditions.checkNotNull(local);
-      remote = Preconditions.checkNotNull(remote);
+      this.local = Preconditions.checkNotNull(local);
+      this.remote = Preconditions.checkNotNull(remote);
+    }
+
+    private void choke() {
+      remote.message(new ChokeImpl(local));
+    }
+
+    private void unchoke() {
+      remote.message(new UnchokeImpl(local));
     }
 
     public void run() {
@@ -143,7 +163,7 @@ public class PeerImpl implements Peer {
       while (true) {
        // TODO: peer.message(new BitFieldImpl(this));
        // TODO: peer.message(new CancelImpl(this));
-       // TODO: peer.message(new ChokeImpl(this));
+        choke();
        // TODO: peer.message(new HandshakeImpl("12345678901234567890".getBytes(), this));
        // TODO: peer.message(new HaveImpl(this));
        // TODO: peer.message(new InterestedImpl(this));
@@ -152,9 +172,9 @@ public class PeerImpl implements Peer {
        // TODO: peer.message(new PieceImpl(this));
        // TODO: peer.message(new PortImpl(this));
        // TODO: peer.message(new RequestImpl(this));
-       // TODO: peer.message(new UnchokeImpl(this));
+        unchoke();
         try {
-          Thread.sleep(100);
+          Thread.sleep(10000);
         } catch (InterruptedException e) {
           throw new RuntimeException(e);
         }
@@ -173,17 +193,29 @@ public class PeerImpl implements Peer {
     executor.execute(new TrackerTalker(this, this.metainfo.getInfoHash()));
     executor.execute(new PeerTalkerManager(this, executor));
 
-    PeerMessage<?> message = null;
-    synchronized (messageQueue) {
-     if (messageQueue.size() > 0) {
-       message = messageQueue.get(0);
-       messageQueue.remove(0);
-     }
-    }
+    while (true) {
+      PeerMessage<?> message = null;
+      synchronized (messageQueue) {
+        if (messageQueue.size() > 0) {
+          message = messageQueue.remove(0);
+        }
+      }
 
-    if (message != null) {
-      logger.info(String.format(
-          "Peer %s sent message %s", message.getPeer().getId(), message.getType()));
+      if (message == null) {
+        continue;
+      }
+
+      if (message instanceof Choke) {
+        logger.info(String.format("Peer %s choked by peer %s", new String(id),
+            new String(message.getPeer().getId())));
+      }
+      else if (message instanceof Unchoke) {
+          logger.info(String.format("Peer %s unchoked by peer %s", new String(id),
+              new String(message.getPeer().getId())));
+      } else {
+        logger.info(String.format(
+            "Peer %s sent message %s", message.getPeer().getId(), message.getType()));
+      }
     }
   }
 

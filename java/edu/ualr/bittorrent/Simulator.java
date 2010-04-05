@@ -86,11 +86,16 @@ public class Simulator {
   private void spawnPeers() {
     ImmutableList<Peer> newPeers;
     while ((newPeers = peerProvider.addPeers()) != null) {
-      peers.addAll(newPeers);
+      logger.info(String.format("Provided with %d new peers", newPeers.size()));
+      synchronized (peers) {
+        peers.addAll(newPeers);
+      }
       for (Peer peer : newPeers) {
         if (executor.isShutdown()) {
+          logger.info("Executor is shutdown");
           return;
         }
+        logger.info(String.format("Requesting execution of peer %s", new String(peer.getId())));
         executor.execute(peer);
       }
     }
@@ -98,7 +103,7 @@ public class Simulator {
 
   public static void main(String[] args) throws NoSuchAlgorithmException {
     BasicConfigurator.configure();
-    Tracker tracker = new TrackerImpl(50);
+    Tracker tracker = new TrackerImpl(5000);
     ImmutableList<Tracker> trackers = ImmutableList.of(tracker);
     ImmutableList<String> pieces = ImmutableList.of("12345678901234567890");
     Metainfo.File file = new MetainfoImpl.FileImpl(new Long(10L), ImmutableList.of("x.txt"));
@@ -107,7 +112,7 @@ public class Simulator {
 
     new Simulator(
         new PeerProviderImpl(metainfo),
-        metainfo, 1
+        metainfo, 100
         ).runExperiment(null);
   }
 }

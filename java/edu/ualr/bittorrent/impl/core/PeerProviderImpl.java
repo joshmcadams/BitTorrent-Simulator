@@ -31,6 +31,7 @@ public class PeerProviderImpl implements PeerProvider {
     logger.info("adding peers");
     for (int i = 0; i < 10; i++) {
       Peer peer = new PeerImpl();
+      logger.info(String.format("Adding peer %s", new String(peer.getId())));
       peer.setTracker(metainfo.getTrackers().get(0));
       peer.setMetainfo(metainfo);
       peers.add(peer);
