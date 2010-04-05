@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,6 +30,7 @@ import edu.ualr.bittorrent.impl.core.messages.RequestImpl;
 import edu.ualr.bittorrent.impl.core.messages.UnchokeImpl;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
+import edu.ualr.bittorrent.interfaces.PeerState;
 import edu.ualr.bittorrent.interfaces.Tracker;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
 import edu.ualr.bittorrent.interfaces.messages.BitField;
@@ -53,8 +55,8 @@ public class PeerImpl implements Peer {
   private final AtomicInteger downloaded = new AtomicInteger();
   private final AtomicInteger uploaded = new AtomicInteger();
   private final AtomicInteger remaining = new AtomicInteger();
-  private final Map<Integer, byte[]> pieces = new ConcurrentHashMap<Integer, byte[]>();
-  private final Map<Peer, Boolean> peerMap = new ConcurrentHashMap<Peer, Boolean>();
+  private final Map<Peer, PeerState> activePeers = new ConcurrentHashMap<Peer, PeerState>();
+  private final ConcurrentLinkedQueue<Peer> newlyReportedPeers = new ConcurrentLinkedQueue<Peer>();
 
   @Override
   public boolean equals(Object object) {
@@ -111,9 +113,7 @@ public class PeerImpl implements Peer {
             ));
         logger.info(String.format("Peer %s received response from tracker", new String(id)));
         for (Peer peer : response.getPeers()) {
-          if (!peerMap.containsKey(peer)) {
-            peerMap.put(peer, false);
-          }
+          newlyReportedPeers.add(peer);
         }
         try {
           Thread.sleep(response.getInterval());
@@ -139,14 +139,14 @@ public class PeerImpl implements Peer {
     public void run() {
       logger.info("Peer talker manager started");
       while (true) {
-        for (Peer peer : peerMap.keySet()) {
+        for (Peer peer : newlyReportedPeers) {
           // TODO: add culling of dead peers
-          if (!peerMap.get(peer)) {
+          if (!activePeers.containsKey(peer)) {
             logger.info(String.format("Local peer %s adding remote peer %s",
                 new String(local.getId()),
                 new String(peer.getId())));
+            activePeers.put(peer, new PeerStateImpl());
             executor.execute(new PeerTalker(local, peer));
-            peerMap.put(peer, true);
           }
         }
         try {
@@ -156,6 +156,10 @@ public class PeerImpl implements Peer {
         }
       }
     }
+  }
+
+  public static class PeerStatusImpl {
+
   }
 
   /**
