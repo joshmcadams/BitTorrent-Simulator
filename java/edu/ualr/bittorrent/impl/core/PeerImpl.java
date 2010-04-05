@@ -17,6 +17,7 @@ import com.google.common.collect.Lists;
 import edu.ualr.bittorrent.PeerMessage;
 import edu.ualr.bittorrent.impl.core.messages.CancelImpl;
 import edu.ualr.bittorrent.impl.core.messages.ChokeImpl;
+import edu.ualr.bittorrent.impl.core.messages.PortImpl;
 import edu.ualr.bittorrent.impl.core.messages.RequestImpl;
 import edu.ualr.bittorrent.impl.core.messages.UnchokeImpl;
 import edu.ualr.bittorrent.interfaces.Metainfo;
@@ -25,6 +26,8 @@ import edu.ualr.bittorrent.interfaces.Tracker;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
 import edu.ualr.bittorrent.interfaces.messages.Cancel;
 import edu.ualr.bittorrent.interfaces.messages.Choke;
+import edu.ualr.bittorrent.interfaces.messages.Port;
+import edu.ualr.bittorrent.interfaces.messages.Request;
 import edu.ualr.bittorrent.interfaces.messages.Unchoke;
 
 public class PeerImpl implements Peer {
@@ -161,6 +164,10 @@ public class PeerImpl implements Peer {
       remote.message(new ChokeImpl(local));
     }
 
+    private void port() {
+      remote.message(new PortImpl(local, 12345));
+    }
+
     private void request() {
       remote.message(new RequestImpl(local, 0, 0, 100));
     }
@@ -181,7 +188,7 @@ public class PeerImpl implements Peer {
        // TODO: peer.message(new KeepAliveImpl(this));
        // TODO: peer.message(new NotInterestedImpl(this));
        // TODO: peer.message(new PieceImpl(this));
-       // TODO: peer.message(new PortImpl(this));
+        port();
         request();
         unchoke();
         try {
@@ -222,6 +229,14 @@ public class PeerImpl implements Peer {
       }
       else if (message instanceof Choke) {
         logger.info(String.format("Peer %s choked by peer %s", new String(id),
+            new String(message.getPeer().getId())));
+      }
+      else if (message instanceof Port) {
+        logger.info(String.format("Peer %s recieved port request from peer %s", new String(id),
+            new String(message.getPeer().getId())));
+      }
+      else if (message instanceof Request) {
+        logger.info(String.format("Peer %s recieved request from peer %s", new String(id),
             new String(message.getPeer().getId())));
       }
       else if (message instanceof Unchoke) {

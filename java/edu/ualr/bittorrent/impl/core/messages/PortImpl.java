@@ -5,12 +5,14 @@ import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.messages.Port;
 
 public class PortImpl extends PeerMessage<Port> implements Port {
-  public PortImpl(Peer peer) {
+  final int port;
+
+  public PortImpl(Peer peer, int port) {
     super(peer, PeerMessage.Type.PORT);
+    this.port = port;
   }
 
   public int getPort() {
-    // TODO Auto-generated method stub
-    return 0;
+    return port;
   }
 }
