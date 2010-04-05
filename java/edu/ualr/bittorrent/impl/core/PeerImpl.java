@@ -17,6 +17,7 @@ import com.google.common.collect.Lists;
 import edu.ualr.bittorrent.PeerMessage;
 import edu.ualr.bittorrent.impl.core.messages.CancelImpl;
 import edu.ualr.bittorrent.impl.core.messages.ChokeImpl;
+import edu.ualr.bittorrent.impl.core.messages.RequestImpl;
 import edu.ualr.bittorrent.impl.core.messages.UnchokeImpl;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
@@ -160,6 +161,10 @@ public class PeerImpl implements Peer {
       remote.message(new ChokeImpl(local));
     }
 
+    private void request() {
+      remote.message(new RequestImpl(local, 0, 0, 100));
+    }
+
     private void unchoke() {
       remote.message(new UnchokeImpl(local));
     }
@@ -177,7 +182,7 @@ public class PeerImpl implements Peer {
        // TODO: peer.message(new NotInterestedImpl(this));
        // TODO: peer.message(new PieceImpl(this));
        // TODO: peer.message(new PortImpl(this));
-       // TODO: peer.message(new RequestImpl(this));
+        request();
         unchoke();
         try {
           Thread.sleep(10000);

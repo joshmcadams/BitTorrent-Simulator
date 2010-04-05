@@ -5,22 +5,26 @@ import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.messages.Request;
 
 public class RequestImpl extends PeerMessage<Request> implements Request {
-  public RequestImpl(Peer peer) {
+  private final int index;
+  private final int begin;
+  private final int length;
+
+  public RequestImpl(Peer peer, int index, int begin, int length) {
     super(peer, PeerMessage.Type.REQUEST);
+    this.index = index;
+    this.begin = begin;
+    this.length = length;
   }
 
   public long getBeginningOffset() {
-    // TODO Auto-generated method stub
-    return 0;
+    return begin;
   }
 
   public long getBlockLength() {
-    // TODO Auto-generated method stub
-    return 0;
+    return length;
   }
 
   public long getPieceIndex() {
-    // TODO Auto-generated method stub
-    return 0;
+    return index;
   }
 }
