@@ -60,6 +60,9 @@ public class PeerImpl implements Peer {
     this.metainfo = Preconditions.checkNotNull(metainfo);
   }
 
+  /**
+   * TrackerTalker
+   */
   private class TrackerTalker implements Runnable {
     private final Peer parent;
     private final byte[] infoHash;
@@ -70,27 +73,27 @@ public class PeerImpl implements Peer {
     }
 
     public void run() {
-      logger.info(String.format("Peer %s contacting tracker", new String(id)));
-      TrackerResponse response = tracker.get(
-          new TrackerRequestImpl(
+      while (true) {
+        logger.info(String.format("Peer %s contacting tracker", new String(id)));
+        TrackerResponse response = tracker.get(
+            new TrackerRequestImpl(
               parent,
               infoHash,
               downloaded.get(),
               uploaded.get(),
               remaining.get()
-          ));
-      logger.info(String.format("Peer %s received response from tracker", new String(id)));
-      for (Peer peer : response.getPeers()) {
-        if (!peerMap.containsKey(peer)) {
-          peerMap.put(peer, false);
+            ));
+        logger.info(String.format("Peer %s received response from tracker", new String(id)));
+        for (Peer peer : response.getPeers()) {
+          if (!peerMap.containsKey(peer)) {
+            peerMap.put(peer, false);
+          }
         }
-      }
-      try {
-        logger.info("Sleeping for " + response.getInterval());
-        Thread.sleep(response.getInterval());
-        logger.info("Awake from " + response.getInterval());
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
+        try {
+          Thread.sleep(response.getInterval());
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
       }
     }
   }
@@ -108,11 +111,19 @@ public class PeerImpl implements Peer {
 
     public void run() {
       logger.info("Peer talker manager started");
-      for (Peer peer : peerMap.keySet()) {
-        // TODO: add culling of dead peers
-        if (!peerMap.get(peer)) {
-          executor.execute(new PeerTalker(local, peer));
-          peerMap.put(peer, true);
+      while (true) {
+        for (Peer peer : peerMap.keySet()) {
+          // TODO: add culling of dead peers
+          if (!peerMap.get(peer)) {
+            logger.info(String.format("Local peer %s adding remote peer %s", local, peer));
+            executor.execute(new PeerTalker(local, peer));
+            peerMap.put(peer, true);
+          }
+        }
+        try {
+          Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
         }
       }
     }
@@ -143,9 +154,7 @@ public class PeerImpl implements Peer {
        // TODO: peer.message(new RequestImpl(this));
        // TODO: peer.message(new UnchokeImpl(this));
         try {
-          logger.info("Sleeping");
           Thread.sleep(100);
-          logger.info("Awake");
         } catch (InterruptedException e) {
           throw new RuntimeException(e);
         }
@@ -191,5 +200,4 @@ public class PeerImpl implements Peer {
       messageQueue.add(message);
     }
   }
-
 }
