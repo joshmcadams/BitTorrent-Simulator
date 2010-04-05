@@ -260,63 +260,102 @@ public class PeerImpl implements Peer {
           message = messageQueue.remove(0);
         }
       }
+      if (message != null) {
+        processMessage(message);
+      }
+    }
+  }
 
-      if (message == null) {
-        continue;
-      }
+  private void processBitFieldMessage(BitField bitfield) {
+    logger.info(String.format("Peer %s bit field by peer %s", new String(id),
+        new String(bitfield.getPeer().getId())));
+  }
 
-      if (message instanceof BitField) {
-        logger.info(String.format("Peer %s bit field by peer %s", new String(id),
-            new String(message.getPeer().getId())));
-      }
-      else if (message instanceof Cancel) {
-        logger.info(String.format("Peer %s canceled by peer %s", new String(id),
-            new String(message.getPeer().getId())));
-      }
-      else if (message instanceof Choke) {
-        logger.info(String.format("Peer %s choked by peer %s", new String(id),
-            new String(message.getPeer().getId())));
-      }
-      else if (message instanceof Port) {
-        logger.info(String.format("Peer %s received port request from peer %s", new String(id),
-            new String(message.getPeer().getId())));
-      }
-      else if (message instanceof Request) {
-        logger.info(String.format("Peer %s received request from peer %s", new String(id),
-            new String(message.getPeer().getId())));
-      }
-      else if (message instanceof Handshake) {
-        logger.info(String.format("Peer %s received handshake from peer %s", new String(id),
-            new String(message.getPeer().getId())));
-      }
-      else if (message instanceof Have) {
-        logger.info(String.format("Peer %s received have message from peer %s", new String(id),
-            new String(message.getPeer().getId())));
-      }
-      else if (message instanceof Interested) {
-        logger.info(String.format(
-            "Peer %s received interested message from peer %s", new String(id),
-            new String(message.getPeer().getId())));
-      }
-      else if (message instanceof KeepAlive) {
-        logger.info(String.format("Peer %s received keep alive from peer %s", new String(id),
-            new String(message.getPeer().getId())));
-      }
-      else if (message instanceof NotInterested) {
-        logger.info(String.format("Peer %s received not interested from peer %s", new String(id),
-            new String(message.getPeer().getId())));
-      }
-      else if (message instanceof Piece) {
-        logger.info(String.format("Peer %s received piece from peer %s", new String(id),
-            new String(message.getPeer().getId())));
-      }
-      else if (message instanceof Unchoke) {
-          logger.info(String.format("Peer %s unchoked by peer %s", new String(id),
-              new String(message.getPeer().getId())));
-      } else {
-        logger.info(String.format(
-            "Peer %s sent message %s", message.getPeer().getId(), message.getType()));
-      }
+  private void processCancelMessage(Cancel cancel) {
+    logger.info(String.format("Peer %s canceled by peer %s", new String(id),
+        new String(cancel.getPeer().getId())));
+  }
+
+  private void processChokeMessage(Choke choke) {
+    logger.info(String.format("Peer %s choked by peer %s", new String(id),
+        new String(choke.getPeer().getId())));
+  }
+
+  private void processPortMessage(Port port) {
+    logger.info(String.format("Peer %s received port request from peer %s", new String(id),
+        new String(port.getPeer().getId())));
+  }
+
+  private void processRequestMessage(Request request) {
+    logger.info(String.format("Peer %s received request from peer %s", new String(id),
+        new String(request.getPeer().getId())));
+  }
+
+  private void processHandshakeMessage(Handshake handshake) {
+    logger.info(String.format("Peer %s received handshake from peer %s", new String(id),
+        new String(handshake.getPeer().getId())));
+  }
+
+  private void processHaveMessage(Have have) {
+    logger.info(String.format("Peer %s received have message from peer %s", new String(id),
+        new String(have.getPeer().getId())));
+  }
+
+  private void processInterestedMessage(Interested interested) {
+    logger.info(String.format(
+        "Peer %s received interested message from peer %s", new String(id),
+        new String(interested.getPeer().getId())));
+  }
+
+  private void processKeepAliveMessage(KeepAlive keepAlive) {
+    logger.info(String.format("Peer %s received keep alive from peer %s", new String(id),
+        new String(keepAlive.getPeer().getId())));
+  }
+
+  private void processNotInterestedMessage(NotInterested notInterested) {
+    logger.info(String.format("Peer %s received not interested from peer %s", new String(id),
+        new String(notInterested.getPeer().getId())));
+  }
+
+  private void processPieceMessage(Piece piece) {
+    logger.info(String.format("Peer %s received piece from peer %s", new String(id),
+        new String(piece.getPeer().getId())));
+  }
+
+  private void processUnchokeMessage(Unchoke unchoke) {
+    logger.info(String.format("Peer %s unchoked by peer %s", new String(id),
+        new String(unchoke.getPeer().getId())));
+  }
+
+  private void processMessage(PeerMessage<?> message) {
+    if (message instanceof BitField) {
+      processBitFieldMessage((BitField) message);
+    } else if (message instanceof Cancel) {
+      processCancelMessage((Cancel) message);
+    } else if (message instanceof Choke) {
+      processChokeMessage((Choke) message);
+    } else if (message instanceof Port) {
+      processPortMessage((Port) message);
+    } else if (message instanceof Request) {
+      processRequestMessage((Request) message);
+    } else if (message instanceof Handshake) {
+      processHandshakeMessage((Handshake) message);
+    } else if (message instanceof Have) {
+      processHaveMessage((Have) message);
+    } else if (message instanceof Interested) {
+      processInterestedMessage((Interested) message);
+    } else if (message instanceof KeepAlive) {
+      processKeepAliveMessage((KeepAlive) message);
+    } else if (message instanceof NotInterested) {
+      processNotInterestedMessage((NotInterested) message);
+    } else if (message instanceof Piece) {
+      processPieceMessage((Piece) message);
+    } else if (message instanceof Unchoke) {
+      processUnchokeMessage((Unchoke) message);
+    } else {
+      throw new IllegalArgumentException(String.format(
+          "Peer %s sent an unsupported message of type %s", new String(message.getPeer().getId()),
+          message.getType()));
     }
   }
 
