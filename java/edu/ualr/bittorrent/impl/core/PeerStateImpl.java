@@ -1,42 +1,51 @@
 package edu.ualr.bittorrent.impl.core;
 
+import java.util.List;
+
 import org.joda.time.Instant;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.sun.tools.javac.util.Pair;
 
 import edu.ualr.bittorrent.interfaces.PeerState;
 
 public class PeerStateImpl implements PeerState {
+  private Instant localSentHandshakeAt;
+  private Instant remoteSentHandshakeAt;
+  private final boolean localChoked = false;
+  private final boolean remoteChoked = false;
+  private final boolean localInteresting = false;
+  private final boolean remoteInteresting = false;
+  private final List<Integer> piecesReceived = Lists.newArrayList();
+  private final List<Integer> piecesSent = Lists.newArrayList();
+  Instant lastLocalKeepAliveSent;
+  Instant lastRemoteKeepAliveReceived;
+  Instant localChokedAt;
+  Instant remoteChokedAt;
 
   public boolean didLocalSendHandshake() {
-    // TODO Auto-generated method stub
-    return false;
+    return localSentHandshakeAt != null;
   }
 
   public boolean didRemoteSendHandshake() {
-    // TODO Auto-generated method stub
-    return false;
+    return remoteSentHandshakeAt != null;
   }
 
   public boolean isLocalChoked() {
-    // TODO Auto-generated method stub
-    return false;
+    return localChoked;
   }
 
   public boolean isLocalInteresting() {
-    // TODO Auto-generated method stub
-    return false;
+    return localInteresting;
   }
 
   public boolean isRemoteChoked() {
-    // TODO Auto-generated method stub
-    return false;
+    return remoteChoked;
   }
 
   public boolean isRemoteInteresting() {
-    // TODO Auto-generated method stub
-    return false;
+    return remoteInteresting;
   }
 
   public ImmutableList<Integer> piecesReceived() {
@@ -70,8 +79,7 @@ public class PeerStateImpl implements PeerState {
   }
 
   public Instant remoteSentKeepAliveAt() {
-    // TODO Auto-generated method stub
-    return null;
+    return lastRemoteKeepAliveReceived;
   }
 
   public int requestedPort() {
@@ -80,8 +88,7 @@ public class PeerStateImpl implements PeerState {
   }
 
   public Instant sentLastKeepAliveAt() {
-    // TODO Auto-generated method stub
-    return null;
+    return lastLocalKeepAliveSent;
   }
 
   public void setLocalIsChoked(boolean choked, Instant when) {
@@ -135,18 +142,15 @@ public class PeerStateImpl implements PeerState {
   }
 
   public void setRemoteSentHandshake(Instant when) {
-    // TODO Auto-generated method stub
-
+    remoteSentHandshakeAt = when;
   }
 
   public void setRemoteSentKeepAlive(Instant when) {
-    // TODO Auto-generated method stub
-
+    lastRemoteKeepAliveReceived = when;
   }
 
   public void setRemoteSentPiece(int pieceIndex, Instant when) {
     // TODO Auto-generated method stub
 
   }
-
 }
