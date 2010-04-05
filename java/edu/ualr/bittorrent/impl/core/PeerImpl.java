@@ -15,8 +15,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 import edu.ualr.bittorrent.PeerMessage;
+import edu.ualr.bittorrent.impl.core.messages.BitFieldImpl;
 import edu.ualr.bittorrent.impl.core.messages.CancelImpl;
 import edu.ualr.bittorrent.impl.core.messages.ChokeImpl;
+import edu.ualr.bittorrent.impl.core.messages.HandshakeImpl;
+import edu.ualr.bittorrent.impl.core.messages.HaveImpl;
+import edu.ualr.bittorrent.impl.core.messages.InterestedImpl;
+import edu.ualr.bittorrent.impl.core.messages.KeepAliveImpl;
+import edu.ualr.bittorrent.impl.core.messages.NotInterestedImpl;
+import edu.ualr.bittorrent.impl.core.messages.PieceImpl;
 import edu.ualr.bittorrent.impl.core.messages.PortImpl;
 import edu.ualr.bittorrent.impl.core.messages.RequestImpl;
 import edu.ualr.bittorrent.impl.core.messages.UnchokeImpl;
@@ -24,8 +31,15 @@ import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.Tracker;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
+import edu.ualr.bittorrent.interfaces.messages.BitField;
 import edu.ualr.bittorrent.interfaces.messages.Cancel;
 import edu.ualr.bittorrent.interfaces.messages.Choke;
+import edu.ualr.bittorrent.interfaces.messages.Handshake;
+import edu.ualr.bittorrent.interfaces.messages.Have;
+import edu.ualr.bittorrent.interfaces.messages.Interested;
+import edu.ualr.bittorrent.interfaces.messages.KeepAlive;
+import edu.ualr.bittorrent.interfaces.messages.NotInterested;
+import edu.ualr.bittorrent.interfaces.messages.Piece;
 import edu.ualr.bittorrent.interfaces.messages.Port;
 import edu.ualr.bittorrent.interfaces.messages.Request;
 import edu.ualr.bittorrent.interfaces.messages.Unchoke;
@@ -156,12 +170,40 @@ public class PeerImpl implements Peer {
       this.remote = Preconditions.checkNotNull(remote);
     }
 
+    private void bitfield() {
+      remote.message(new BitFieldImpl(local, "123".getBytes()));
+    }
+
     private void cancel() {
       remote.message(new CancelImpl(local, 0, 0, 100));
     }
 
     private void choke() {
       remote.message(new ChokeImpl(local));
+    }
+
+    private void handshake() {
+      remote.message(new HandshakeImpl(local.getId(), local));
+    }
+
+    private void have() {
+      remote.message(new HaveImpl(local, 0));
+    }
+
+    private void interested() {
+      remote.message(new InterestedImpl(local));
+    }
+
+    private void keepAlive() {
+      remote.message(new KeepAliveImpl(local));
+    }
+
+    private void notInterested() {
+      remote.message(new NotInterestedImpl(local));
+    }
+
+    private void piece() {
+      remote.message(new PieceImpl(local, 0, 0, "TODO".getBytes()));
     }
 
     private void port() {
@@ -179,15 +221,15 @@ public class PeerImpl implements Peer {
     public void run() {
       logger.info("Peer talker started");
       while (true) {
-       // TODO: peer.message(new BitFieldImpl(this));
+        bitfield();
         cancel();
         choke();
-       // TODO: peer.message(new HandshakeImpl("12345678901234567890".getBytes(), this));
-       // TODO: peer.message(new HaveImpl(this));
-       // TODO: peer.message(new InterestedImpl(this));
-       // TODO: peer.message(new KeepAliveImpl(this));
-       // TODO: peer.message(new NotInterestedImpl(this));
-       // TODO: peer.message(new PieceImpl(this));
+        handshake();
+        have();
+        interested();
+        keepAlive();
+        notInterested();
+        piece();
         port();
         request();
         unchoke();
@@ -223,7 +265,11 @@ public class PeerImpl implements Peer {
         continue;
       }
 
-      if (message instanceof Cancel) {
+      if (message instanceof BitField) {
+        logger.info(String.format("Peer %s bit field by peer %s", new String(id),
+            new String(message.getPeer().getId())));
+      }
+      else if (message instanceof Cancel) {
         logger.info(String.format("Peer %s canceled by peer %s", new String(id),
             new String(message.getPeer().getId())));
       }
@@ -232,11 +278,36 @@ public class PeerImpl implements Peer {
             new String(message.getPeer().getId())));
       }
       else if (message instanceof Port) {
-        logger.info(String.format("Peer %s recieved port request from peer %s", new String(id),
+        logger.info(String.format("Peer %s received port request from peer %s", new String(id),
             new String(message.getPeer().getId())));
       }
       else if (message instanceof Request) {
-        logger.info(String.format("Peer %s recieved request from peer %s", new String(id),
+        logger.info(String.format("Peer %s received request from peer %s", new String(id),
+            new String(message.getPeer().getId())));
+      }
+      else if (message instanceof Handshake) {
+        logger.info(String.format("Peer %s received handshake from peer %s", new String(id),
+            new String(message.getPeer().getId())));
+      }
+      else if (message instanceof Have) {
+        logger.info(String.format("Peer %s received have message from peer %s", new String(id),
+            new String(message.getPeer().getId())));
+      }
+      else if (message instanceof Interested) {
+        logger.info(String.format(
+            "Peer %s received interested message from peer %s", new String(id),
+            new String(message.getPeer().getId())));
+      }
+      else if (message instanceof KeepAlive) {
+        logger.info(String.format("Peer %s received keep alive from peer %s", new String(id),
+            new String(message.getPeer().getId())));
+      }
+      else if (message instanceof NotInterested) {
+        logger.info(String.format("Peer %s received not interested from peer %s", new String(id),
+            new String(message.getPeer().getId())));
+      }
+      else if (message instanceof Piece) {
+        logger.info(String.format("Peer %s received piece from peer %s", new String(id),
             new String(message.getPeer().getId())));
       }
       else if (message instanceof Unchoke) {

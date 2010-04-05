@@ -5,12 +5,14 @@ import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.messages.Have;
 
 public class HaveImpl extends PeerMessage<Have> implements Have {
-  public HaveImpl(Peer peer) {
+  final int pieceIndex;
+
+  public HaveImpl(Peer peer, int pieceIndex) {
     super(peer, PeerMessage.Type.HAVE);
+    this.pieceIndex = pieceIndex;
   }
 
   public long getPieceIndex() {
-    // TODO Auto-generated method stub
-    return 0;
+    return pieceIndex;
   }
 }
