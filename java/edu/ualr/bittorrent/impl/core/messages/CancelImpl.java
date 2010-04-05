@@ -5,22 +5,26 @@ import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.messages.Cancel;
 
 public class CancelImpl extends PeerMessage<Cancel> implements Cancel {
-  public CancelImpl(Peer peer) {
+  private final int index;
+  private final int begin;
+  private final int length;
+
+  public CancelImpl(Peer peer, int index, int begin, int length) {
     super(peer, PeerMessage.Type.CANCEL);
+    this.index = index;
+    this.begin = begin;
+    this.length = length;
   }
 
   public long getBeginningOffset() {
-    // TODO Auto-generated method stub
-    return 0;
+    return begin;
   }
 
   public long getBlockLength() {
-    // TODO Auto-generated method stub
-    return 0;
+    return length;
   }
 
   public long getPieceIndex() {
-    // TODO Auto-generated method stub
-    return 0;
+    return index;
   }
 }

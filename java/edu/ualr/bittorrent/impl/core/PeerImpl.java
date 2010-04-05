@@ -15,12 +15,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 import edu.ualr.bittorrent.PeerMessage;
+import edu.ualr.bittorrent.impl.core.messages.CancelImpl;
 import edu.ualr.bittorrent.impl.core.messages.ChokeImpl;
 import edu.ualr.bittorrent.impl.core.messages.UnchokeImpl;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.Tracker;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
+import edu.ualr.bittorrent.interfaces.messages.Cancel;
 import edu.ualr.bittorrent.interfaces.messages.Choke;
 import edu.ualr.bittorrent.interfaces.messages.Unchoke;
 
@@ -150,6 +152,10 @@ public class PeerImpl implements Peer {
       this.remote = Preconditions.checkNotNull(remote);
     }
 
+    private void cancel() {
+      remote.message(new CancelImpl(local, 0, 0, 100));
+    }
+
     private void choke() {
       remote.message(new ChokeImpl(local));
     }
@@ -162,7 +168,7 @@ public class PeerImpl implements Peer {
       logger.info("Peer talker started");
       while (true) {
        // TODO: peer.message(new BitFieldImpl(this));
-       // TODO: peer.message(new CancelImpl(this));
+        cancel();
         choke();
        // TODO: peer.message(new HandshakeImpl("12345678901234567890".getBytes(), this));
        // TODO: peer.message(new HaveImpl(this));
@@ -205,7 +211,11 @@ public class PeerImpl implements Peer {
         continue;
       }
 
-      if (message instanceof Choke) {
+      if (message instanceof Cancel) {
+        logger.info(String.format("Peer %s canceled by peer %s", new String(id),
+            new String(message.getPeer().getId())));
+      }
+      else if (message instanceof Choke) {
         logger.info(String.format("Peer %s choked by peer %s", new String(id),
             new String(message.getPeer().getId())));
       }
