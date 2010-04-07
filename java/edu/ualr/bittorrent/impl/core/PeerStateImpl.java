@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.joda.time.Instant;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.sun.tools.javac.util.Pair;
@@ -11,146 +12,236 @@ import com.sun.tools.javac.util.Pair;
 import edu.ualr.bittorrent.interfaces.PeerState;
 
 public class PeerStateImpl implements PeerState {
-  private Instant localSentHandshakeAt;
-  private Instant remoteSentHandshakeAt;
-  private final boolean localChoked = false;
-  private final boolean remoteChoked = false;
-  private final boolean localInteresting = false;
-  private final boolean remoteInteresting = false;
-  private final List<Integer> piecesReceived = Lists.newArrayList();
-  private final List<Integer> piecesSent = Lists.newArrayList();
-  Instant lastLocalKeepAliveSent;
-  Instant lastRemoteKeepAliveReceived;
-  Instant localChokedAt;
-  Instant remoteChokedAt;
+  Instant lastLocalHandshakeSentAt;
+  Instant lastRemoteHandshakeSentAt;
+  Instant lastLocalKeepAliveSentAt;
+  Instant lastRemoteKeepAliveSentAt;
+  int port;
+  List<PieceRequest> piecesRequestedByRemote = Lists.newLinkedList();
+  List<PieceRequest> piecesRequestedByLocal = Lists.newLinkedList();
+  Pair<InterestLevel, Instant> localInterestLevelInRemote;
+  Pair<InterestLevel, Instant> remoteInterestLevelInLocal;
+  Pair<ChokeStatus, Instant> localChokeStatus;
+  Pair<ChokeStatus, Instant> remoteChokeStatus;
+  List<PieceDownload> piecesDownloaded = Lists.newArrayList();
+  List<PieceUpload> piecesUploaded = Lists.newArrayList();
+  List<PieceDeclaration> remoteDeclaredPieces = Lists.newArrayList();
 
-  public boolean didLocalSendHandshake() {
-    return localSentHandshakeAt != null;
+  public class PieceTransferImpl implements PieceTransfer {
+    Instant completionTime;
+    Integer pieceIndex;
+    Instant startTime;
+
+    public Instant getCompletionTime() {
+      return completionTime;
+    }
+
+    public Integer getPieceIndex() {
+      return pieceIndex;
+    }
+
+    public Instant getStartTime() {
+      return startTime;
+    }
+
+    public void setCompletionTime(Instant time) {
+      this.completionTime = Preconditions.checkNotNull(time);
+    }
+
+    public void setPieceIndex(Integer index) {
+      this.pieceIndex = Preconditions.checkNotNull(index);
+    }
+
+    public void setStartTime(Instant time) {
+      this.startTime = Preconditions.checkNotNull(time);
+    }
   }
 
-  public boolean didRemoteSendHandshake() {
-    return remoteSentHandshakeAt != null;
+  public class PieceUploadImpl extends PieceTransferImpl implements PieceUpload { }
+
+  public class PieceDownloadImpl extends PieceTransferImpl implements PieceDownload {
+    boolean valid;
+
+    public void setValidPiece(boolean valid) {
+      this.valid = Preconditions.checkNotNull(valid);
+    }
+
+    public boolean wasValidPiece() {
+      return valid;
+    }
   }
 
-  public boolean isLocalChoked() {
-    return localChoked;
+  public class PieceRequestImpl implements PieceRequest {
+    Integer pieceIndex;
+    Instant requestTime;
+
+    public Integer getPieceIndex() {
+      return pieceIndex;
+    }
+
+    public Instant getRequestTime() {
+      return requestTime;
+    }
+
+    public void setPieceIndex(Integer index) {
+      this.pieceIndex = Preconditions.checkNotNull(index);
+    }
+
+    public void setRequestTime(Instant time) {
+      this.requestTime = Preconditions.checkNotNull(time);
+    }
   }
 
-  public boolean isLocalInteresting() {
-    return localInteresting;
+  public class PieceDeclarationImpl implements PieceDeclaration {
+    Instant declarationTime;
+    Integer pieceIndex;
+
+    public Instant getDeclarationTime() {
+      return declarationTime;
+    }
+
+    public Integer getPieceIndex() {
+      return pieceIndex;
+    }
+
+    public void setDeclarationTime(Instant time) {
+      this.declarationTime = Preconditions.checkNotNull(time);
+    }
+
+    public void setPieceIndex(Integer index) {
+      this.pieceIndex = Preconditions.checkNotNull(index);
+    }
   }
 
-  public boolean isRemoteChoked() {
-    return remoteChoked;
+  public void cancelLocalRequestedPiece(PieceRequest request) {
+    while (piecesRequestedByLocal.remove(Preconditions.checkNotNull(request))) { }
   }
 
-  public boolean isRemoteInteresting() {
-    return remoteInteresting;
+  public void cancelRemoteRequestedPiece(PieceRequest request) {
+    while (piecesRequestedByRemote.remove(Preconditions.checkNotNull(request))) { }
   }
 
-  public ImmutableList<Integer> piecesReceived() {
-    // TODO Auto-generated method stub
-    return null;
+  public Instant whenDidLocalSendHandshake() {
+    return this.lastLocalHandshakeSentAt;
   }
 
-  public ImmutableList<Pair<Integer, Instant>> piecesSent() {
-    // TODO Auto-generated method stub
-    return null;
+  public Pair<InterestLevel, Instant> getLocalInterestLevelInRemote() {
+    return localInterestLevelInRemote;
   }
 
-  public boolean remoteHasPiece(int pieceIndex) {
-    // TODO Auto-generated method stub
-    return false;
+  public ImmutableList<PieceRequest> getLocalRequestedPieces() {
+    return ImmutableList.copyOf(piecesRequestedByLocal);
   }
 
-  public ImmutableList<Integer> remoteHasPieces() {
-    // TODO Auto-generated method stub
-    return null;
+  public Pair<InterestLevel, Instant> getRemoteInterestLevelInLocal() {
+    return remoteInterestLevelInLocal;
   }
 
-  public Instant remoteRequestedPiece(int pieceIndex) {
-    // TODO Auto-generated method stub
-    return null;
+  public ImmutableList<PieceRequest> getRemoteRequestedPieces() {
+    return ImmutableList.copyOf(piecesRequestedByRemote);
   }
 
-  public ImmutableList<Pair<Integer, Instant>> remoteRequestedPieces() {
-    // TODO Auto-generated method stub
-    return null;
+  public Instant getRemoteSentKeepAliveAt() {
+    return this.lastRemoteKeepAliveSentAt;
   }
 
-  public Instant remoteSentKeepAliveAt() {
-    return lastRemoteKeepAliveReceived;
+  public Instant getLocalSentKeepAliveAt() {
+    return this.lastLocalKeepAliveSentAt;
+  }
+
+  public Pair<ChokeStatus, Instant> isLocalChoked() {
+    return localChokeStatus;
+  }
+
+  public Pair<ChokeStatus, Instant> isRemoteChoked() {
+    return remoteChokeStatus;
+  }
+
+  public ImmutableList<PieceDownload> piecesReceived() {
+    return ImmutableList.copyOf(piecesDownloaded);
+  }
+
+  public ImmutableList<PieceUpload> piecesSent() {
+    return ImmutableList.copyOf(piecesUploaded);
+  }
+
+  public ImmutableList<PieceDeclaration> remoteHasPieces() {
+    return ImmutableList.copyOf(remoteDeclaredPieces);
   }
 
   public int requestedPort() {
-    // TODO Auto-generated method stub
-    return 0;
+    return port;
   }
 
-  public Instant sentLastKeepAliveAt() {
-    return lastLocalKeepAliveSent;
+  public void setLocalInterestLevelInRemote(InterestLevel interest, Instant when) {
+    localInterestLevelInRemote = new Pair<InterestLevel, Instant>(
+        Preconditions.checkNotNull(interest),
+        Preconditions.checkNotNull(when)
+    );
   }
 
-  public void setLocalIsChoked(boolean choked, Instant when) {
-    // TODO Auto-generated method stub
-
+  public void setLocalIsChoked(ChokeStatus choked, Instant when) {
+    localChokeStatus = new Pair<ChokeStatus, Instant>(
+        Preconditions.checkNotNull(choked),
+        Preconditions.checkNotNull(when)
+    );
   }
 
-  public void setLocalIsInteresting(boolean interesting, Instant when) {
-    // TODO Auto-generated method stub
-
+  public void setLocalRequestedPiece(PieceRequest request) {
+    piecesRequestedByLocal.add(Preconditions.checkNotNull(request));
   }
 
-  public void setLocalSentHandshake(Instant when) {
-    // TODO Auto-generated method stub
-
+  public void setLocalSentHandshakeAt(Instant when) {
+    this.lastLocalHandshakeSentAt = Preconditions.checkNotNull(when);
   }
 
-  public void setLocalSentKeepAlive(Instant when) {
-    // TODO Auto-generated method stub
-
+  public void setLocalSentKeepAliveAt(Instant when) {
+    this.lastLocalKeepAliveSentAt = Preconditions.checkNotNull(when);
   }
 
-  public void setLocalSentPiece(int pieceIndex, Instant when) {
-    // TODO Auto-generated method stub
-
+  public void setLocalSentPiece(PieceUpload piece) {
+    piecesUploaded.add(Preconditions.checkNotNull(piece));
   }
 
-  public void setRemoteHasPiece(int pieceIndex, Instant when) {
-    // TODO Auto-generated method stub
-
+  public void setRemoteHasPiece(PieceDeclaration declaration) {
+    remoteDeclaredPieces.add(Preconditions.checkNotNull(declaration));
   }
 
-  public void setRemoteIsChoked(boolean choked, Instant when) {
-    // TODO Auto-generated method stub
-
+  public void setRemoteInterestLevelInLocal(InterestLevel interest, Instant when) {
+    remoteInterestLevelInLocal = new Pair<InterestLevel, Instant>(
+        Preconditions.checkNotNull(interest),
+        Preconditions.checkNotNull(when)
+    );
   }
 
-  public void setRemoteIsInteresting(boolean interesting, Instant when) {
-    // TODO Auto-generated method stub
-
+  public void setRemoteIsChoked(ChokeStatus choked, Instant when) {
+    remoteChokeStatus = new Pair<ChokeStatus, Instant>(
+        Preconditions.checkNotNull(choked),
+        Preconditions.checkNotNull(when)
+    );
   }
 
-  public void setRemoteRequestedPiece(int pieceIndex, Instant when) {
-    // TODO Auto-generated method stub
-
+  public void setRemoteRequestedPiece(PieceRequest request) {
+    piecesRequestedByRemote.add(Preconditions.checkNotNull(request));
   }
 
   public void setRemoteRequestedPort(int port) {
-    // TODO Auto-generated method stub
-
+    this.port = Preconditions.checkNotNull(port);
   }
 
-  public void setRemoteSentHandshake(Instant when) {
-    remoteSentHandshakeAt = when;
+  public void setRemoteSentHandshakeAt(Instant when) {
+    this.lastRemoteHandshakeSentAt = Preconditions.checkNotNull(when);
   }
 
-  public void setRemoteSentKeepAlive(Instant when) {
-    lastRemoteKeepAliveReceived = when;
+  public void setRemoteSentKeepAliveAt(Instant when) {
+    this.lastRemoteKeepAliveSentAt = Preconditions.checkNotNull(when);
   }
 
-  public void setRemoteSentPiece(int pieceIndex, Instant when) {
-    // TODO Auto-generated method stub
+  public void setRemoteSentPiece(PieceDownload piece) {
+    piecesDownloaded.add(Preconditions.checkNotNull(piece));
+  }
 
+  public Instant whenDidRemoteSendHandshake() {
+    return lastRemoteHandshakeSentAt;
   }
 }
