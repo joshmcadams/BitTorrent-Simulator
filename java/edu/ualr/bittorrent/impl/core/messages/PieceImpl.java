@@ -18,7 +18,7 @@ public class PieceImpl extends PeerMessage<Piece> implements Piece {
     this.block = Preconditions.checkNotNull(block);
   }
 
-  public long getBeginningOffset() {
+  public int getBeginningOffset() {
     return beginningOffset;
   }
 
@@ -26,7 +26,7 @@ public class PieceImpl extends PeerMessage<Piece> implements Piece {
     return block;
   }
 
-  public long getPieceIndex() {
+  public int getPieceIndex() {
     return pieceIndex;
   }
 }

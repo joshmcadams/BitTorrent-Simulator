@@ -59,6 +59,34 @@ public interface PeerState {
      * @return
      */
     Instant getCompletionTime();
+
+    /**
+     * Sets the starting position of the bytes requested in the piece.
+     *
+     * @param offset
+     */
+    void setBlockOffset(Integer offset);
+
+    /**
+     * Returns the starting position of the bytes requested in the piece.
+     *
+     * @return
+     */
+    Integer getBlockOffset();
+
+    /**
+     * Sets the size of the data block requested.
+     *
+     * @param size
+     */
+    void setBlockSize(Integer size);
+
+    /**
+     * Returns the size of the data block requested.
+     *
+     * @return
+     */
+    Integer getBlockSize();
   }
 
   public interface PieceUpload extends PieceTransfer {}
@@ -112,6 +140,34 @@ public interface PeerState {
      * @return
      */
     Instant getRequestTime();
+
+    /**
+     * Sets the starting position of the bytes requested in the piece.
+     *
+     * @param offset
+     */
+    void setBlockOffset(Integer offset);
+
+    /**
+     * Returns the starting position of the bytes requested in the piece.
+     *
+     * @return
+     */
+    Integer getBlockOffset();
+
+    /**
+     * Sets the size of the data block requested.
+     *
+     * @param size
+     */
+    void setBlockSize(Integer size);
+
+    /**
+     * Returns the size of the data block requested.
+     *
+     * @return
+     */
+    Integer getBlockSize();
   }
 
   /**
@@ -288,6 +344,20 @@ public interface PeerState {
    * @return
    */
   ImmutableList<PieceDeclaration> remoteHasPieces();
+
+  /**
+   * Log when the local notifies the remote that it has another piece.
+   *
+   * @param declaration
+   */
+  void setLocalHasPiece(PieceDeclaration declaration);
+
+  /**
+   * Get the list of pieces that the local has.
+   *
+   * @return
+   */
+  ImmutableList<PieceDeclaration> localHasPieces();
 
   /**
    * Log when the remote requests a piece.

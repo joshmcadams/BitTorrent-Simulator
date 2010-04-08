@@ -16,15 +16,15 @@ public class RequestImpl extends PeerMessage<Request> implements Request {
     this.length = length;
   }
 
-  public long getBeginningOffset() {
+  public int getBeginningOffset() {
     return begin;
   }
 
-  public long getBlockLength() {
+  public int getBlockLength() {
     return length;
   }
 
-  public long getPieceIndex() {
+  public int getPieceIndex() {
     return index;
   }
 }

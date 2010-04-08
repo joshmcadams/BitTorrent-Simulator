@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
+import org.joda.time.Instant;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
@@ -33,6 +34,12 @@ import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.PeerState;
 import edu.ualr.bittorrent.interfaces.Tracker;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
+import edu.ualr.bittorrent.interfaces.PeerState.ChokeStatus;
+import edu.ualr.bittorrent.interfaces.PeerState.InterestLevel;
+import edu.ualr.bittorrent.interfaces.PeerState.PieceDeclaration;
+import edu.ualr.bittorrent.interfaces.PeerState.PieceDownload;
+import edu.ualr.bittorrent.interfaces.PeerState.PieceRequest;
+import edu.ualr.bittorrent.interfaces.PeerState.PieceUpload;
 import edu.ualr.bittorrent.interfaces.messages.BitField;
 import edu.ualr.bittorrent.interfaces.messages.Cancel;
 import edu.ualr.bittorrent.interfaces.messages.Choke;
@@ -145,8 +152,9 @@ public class PeerImpl implements Peer {
             logger.info(String.format("Local peer %s adding remote peer %s",
                 new String(local.getId()),
                 new String(peer.getId())));
-            activePeers.put(peer, new PeerStateImpl());
-            executor.execute(new PeerTalker(local, peer));
+            PeerState state = new PeerStateImpl();
+            activePeers.put(peer, state);
+            executor.execute(new PeerTalker(local, peer, state));
           }
         }
         try {
@@ -168,74 +176,135 @@ public class PeerImpl implements Peer {
   private class PeerTalker implements Runnable {
     private final Peer local;
     private final Peer remote;
+    private final PeerState state;
 
-    PeerTalker(Peer local, Peer remote) {
+    PeerTalker(Peer local, Peer remote, PeerState state) {
       this.local = Preconditions.checkNotNull(local);
       this.remote = Preconditions.checkNotNull(remote);
+      this.state = Preconditions.checkNotNull(state);
     }
 
-    private void bitfield() {
-      remote.message(new BitFieldImpl(local, "123".getBytes()));
+    private void bitfield(byte [] bitfield) {
+      // TODO: capture state of sent haves based on bitfield
+      logger.info(String.format("Local peer %s sending bitfield message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      remote.message(new BitFieldImpl(local, bitfield));
     }
 
-    private void cancel() {
+    private void cancel(PieceRequest request) {
+      logger.info(String.format("Local peer %s sending cancel message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.cancelLocalRequestedPiece(request);
       remote.message(new CancelImpl(local, 0, 0, 100));
     }
 
     private void choke() {
+      logger.info(String.format("Local peer %s sending choke message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setRemoteIsChoked(ChokeStatus.CHOKED, new Instant());
       remote.message(new ChokeImpl(local));
     }
 
     private void handshake() {
+      logger.info(String.format("Local peer %s sending handshake message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setRemoteSentHandshakeAt(new Instant());
       remote.message(new HandshakeImpl(local.getId(), local));
     }
 
-    private void have() {
+    private void have(PieceDeclaration declaration) {
+      logger.info(String.format("Local peer %s sending have message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setLocalHasPiece(declaration);
       remote.message(new HaveImpl(local, 0));
     }
 
     private void interested() {
+      logger.info(String.format("Local peer %s sending interested message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setLocalInterestLevelInRemote(InterestLevel.INTERESTED, new Instant());
       remote.message(new InterestedImpl(local));
     }
 
     private void keepAlive() {
+      logger.info(String.format("Local peer %s sending keep alive message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setLocalSentKeepAliveAt(new Instant());
       remote.message(new KeepAliveImpl(local));
     }
 
     private void notInterested() {
+      logger.info(String.format("Local peer %s sending not interested message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setLocalInterestLevelInRemote(InterestLevel.NOT_INTERESTED, new Instant());
       remote.message(new NotInterestedImpl(local));
     }
 
-    private void piece() {
+    private void piece(PieceUpload piece) {
+      logger.info(String.format("Local peer %s sending piece message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setLocalSentPiece(piece);
       remote.message(new PieceImpl(local, 0, 0, "TODO".getBytes()));
     }
 
-    private void port() {
-      remote.message(new PortImpl(local, 12345));
+    private void port(int port) {
+      logger.info(String.format("Local peer %s sending port message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      remote.message(new PortImpl(local, port));
     }
 
-    private void request() {
+    private void request(PieceRequest request) {
+      logger.info(String.format("Local peer %s sending request message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setLocalRequestedPiece(request);
       remote.message(new RequestImpl(local, 0, 0, 100));
     }
 
     private void unchoke() {
+      state.setRemoteIsChoked(ChokeStatus.CHOKED, new Instant());
+      logger.info(String.format("Local peer %s sending unchoke message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
       remote.message(new UnchokeImpl(local));
     }
 
     public void run() {
       logger.info("Peer talker started");
       while (true) {
-        bitfield();
-        cancel();
+        PieceRequest request = new PeerStateImpl.PieceRequestImpl();
+        request.setPieceIndex(0);
+        request.setBlockOffset(0);
+        request.setBlockSize(100);
+        request.setRequestTime(new Instant());
+
+        PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+        declaration.setPieceIndex(0);
+        declaration.setDeclarationTime(new Instant());
+
+        PieceUpload upload = new PeerStateImpl.PieceUploadImpl();
+        upload.setPieceIndex(0);
+        upload.setBlockOffset(0);
+        upload.setBlockSize(1000);
+        upload.setStartTime(new Instant());
+        upload.setCompletionTime(upload.getStartTime().plus(1000L));
+
+        PieceDownload download = new PeerStateImpl.PieceDownloadImpl();
+        download.setPieceIndex(0);
+        download.setBlockOffset(0);
+        download.setBlockSize(1000);
+        download.setStartTime(new Instant());
+        download.setCompletionTime(upload.getStartTime().plus(1000L));
+
+        bitfield("123".getBytes());
+        cancel(request);
         choke();
         handshake();
-        have();
+        have(declaration);
         interested();
         keepAlive();
         notInterested();
-        piece();
-        port();
-        request();
+        piece(upload);
+        port(1234);
+        request(request);
         unchoke();
         try {
           Thread.sleep(10000);
@@ -271,62 +340,130 @@ public class PeerImpl implements Peer {
   }
 
   private void processBitFieldMessage(BitField bitfield) {
+    // TODO: capture state of remote haves based on bitfield
     logger.info(String.format("Peer %s bit field by peer %s", new String(id),
         new String(bitfield.getPeer().getId())));
   }
 
   private void processCancelMessage(Cancel cancel) {
+    PeerState state = activePeers.get(cancel.getPeer());
+
+    PieceRequest request = new PeerStateImpl.PieceRequestImpl();
+    request.setPieceIndex(cancel.getPieceIndex());
+    request.setBlockOffset(cancel.getBeginningOffset());
+    request.setBlockSize(cancel.getBlockLength());
+    request.setRequestTime(new Instant());
+
+    state.cancelRemoteRequestedPiece(request);
+
     logger.info(String.format("Peer %s canceled by peer %s", new String(id),
         new String(cancel.getPeer().getId())));
   }
 
   private void processChokeMessage(Choke choke) {
+    PeerState state = activePeers.get(choke.getPeer());
+
+    state.setLocalIsChoked(ChokeStatus.CHOKED, new Instant());
+
     logger.info(String.format("Peer %s choked by peer %s", new String(id),
         new String(choke.getPeer().getId())));
   }
 
   private void processPortMessage(Port port) {
+    PeerState state = activePeers.get(port.getPeer());
+
+    state.setRemoteRequestedPort(port.getPort());
+
     logger.info(String.format("Peer %s received port request from peer %s", new String(id),
         new String(port.getPeer().getId())));
   }
 
   private void processRequestMessage(Request request) {
+    PeerState state = activePeers.get(request.getPeer());
+
+    PieceRequest pieceRequest = new PeerStateImpl.PieceRequestImpl();
+    pieceRequest.setPieceIndex(request.getPieceIndex());
+    pieceRequest.setBlockOffset(request.getBeginningOffset());
+    pieceRequest.setBlockSize(request.getBlockLength());
+    pieceRequest.setRequestTime(new Instant());
+
+    state.setRemoteRequestedPiece(pieceRequest);
+
     logger.info(String.format("Peer %s received request from peer %s", new String(id),
         new String(request.getPeer().getId())));
   }
 
   private void processHandshakeMessage(Handshake handshake) {
+    PeerState state = activePeers.get(handshake.getPeer());
+
+    state.setRemoteSentHandshakeAt(new Instant());
+
     logger.info(String.format("Peer %s received handshake from peer %s", new String(id),
         new String(handshake.getPeer().getId())));
   }
 
   private void processHaveMessage(Have have) {
+    PeerState state = activePeers.get(have.getPeer());
+
+    PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+    declaration.setPieceIndex(0);
+    declaration.setDeclarationTime(new Instant());
+
+    state.setRemoteHasPiece(declaration);
+
     logger.info(String.format("Peer %s received have message from peer %s", new String(id),
         new String(have.getPeer().getId())));
   }
 
   private void processInterestedMessage(Interested interested) {
+    PeerState state = activePeers.get(interested.getPeer());
+
+    state.setRemoteInterestLevelInLocal(InterestLevel.INTERESTED, new Instant());
+
     logger.info(String.format(
         "Peer %s received interested message from peer %s", new String(id),
         new String(interested.getPeer().getId())));
   }
 
   private void processKeepAliveMessage(KeepAlive keepAlive) {
+    PeerState state = activePeers.get(keepAlive.getPeer());
+
+    state.setRemoteSentKeepAliveAt(new Instant());
+
     logger.info(String.format("Peer %s received keep alive from peer %s", new String(id),
         new String(keepAlive.getPeer().getId())));
   }
 
   private void processNotInterestedMessage(NotInterested notInterested) {
+    PeerState state = activePeers.get(notInterested.getPeer());
+
+    state.setRemoteInterestLevelInLocal(InterestLevel.NOT_INTERESTED, new Instant());
+
     logger.info(String.format("Peer %s received not interested from peer %s", new String(id),
         new String(notInterested.getPeer().getId())));
   }
 
   private void processPieceMessage(Piece piece) {
+    PeerState state = activePeers.get(piece.getPeer());
+
+    PieceDownload download = new PeerStateImpl.PieceDownloadImpl();
+    download.setPieceIndex(piece.getPieceIndex());
+    download.setBlockOffset(piece.getBeginningOffset());
+    download.setBlockSize(piece.getBlock().length);
+    download.setStartTime(new Instant());
+    download.setCompletionTime(new Instant());
+
+    state.setRemoteSentPiece(download);
+
     logger.info(String.format("Peer %s received piece from peer %s", new String(id),
         new String(piece.getPeer().getId())));
   }
 
   private void processUnchokeMessage(Unchoke unchoke) {
+    PeerState state = activePeers.get(unchoke.getPeer());
+
+    state.setLocalIsChoked(ChokeStatus.CHOKED, new Instant());
+
     logger.info(String.format("Peer %s unchoked by peer %s", new String(id),
         new String(unchoke.getPeer().getId())));
   }

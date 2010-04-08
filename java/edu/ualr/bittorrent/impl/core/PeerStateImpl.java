@@ -26,11 +26,14 @@ public class PeerStateImpl implements PeerState {
   List<PieceDownload> piecesDownloaded = Lists.newArrayList();
   List<PieceUpload> piecesUploaded = Lists.newArrayList();
   List<PieceDeclaration> remoteDeclaredPieces = Lists.newArrayList();
+  List<PieceDeclaration> localDeclaredPieces = Lists.newArrayList();
 
-  public class PieceTransferImpl implements PieceTransfer {
+  public static class PieceTransferImpl implements PieceTransfer {
     Instant completionTime;
     Integer pieceIndex;
     Instant startTime;
+    Integer blockOffset;
+    Integer blockSize;
 
     public Instant getCompletionTime() {
       return completionTime;
@@ -55,11 +58,27 @@ public class PeerStateImpl implements PeerState {
     public void setStartTime(Instant time) {
       this.startTime = Preconditions.checkNotNull(time);
     }
+
+    public Integer getBlockOffset() {
+      return blockOffset;
+    }
+
+    public Integer getBlockSize() {
+      return blockSize;
+    }
+
+    public void setBlockOffset(Integer offset) {
+      this.blockOffset = Preconditions.checkNotNull(offset);
+    }
+
+    public void setBlockSize(Integer size) {
+      this.blockSize = Preconditions.checkNotNull(size);
+    }
   }
 
-  public class PieceUploadImpl extends PieceTransferImpl implements PieceUpload { }
+  public static class PieceUploadImpl extends PieceTransferImpl implements PieceUpload { }
 
-  public class PieceDownloadImpl extends PieceTransferImpl implements PieceDownload {
+  public static class PieceDownloadImpl extends PieceTransferImpl implements PieceDownload {
     boolean valid;
 
     public void setValidPiece(boolean valid) {
@@ -71,9 +90,11 @@ public class PeerStateImpl implements PeerState {
     }
   }
 
-  public class PieceRequestImpl implements PieceRequest {
+  public static class PieceRequestImpl implements PieceRequest {
     Integer pieceIndex;
     Instant requestTime;
+    Integer blockOffset;
+    Integer blockSize;
 
     public Integer getPieceIndex() {
       return pieceIndex;
@@ -90,9 +111,25 @@ public class PeerStateImpl implements PeerState {
     public void setRequestTime(Instant time) {
       this.requestTime = Preconditions.checkNotNull(time);
     }
+
+    public Integer getBlockOffset() {
+      return blockOffset;
+    }
+
+    public Integer getBlockSize() {
+      return blockSize;
+    }
+
+    public void setBlockOffset(Integer offset) {
+      this.blockOffset = Preconditions.checkNotNull(offset);
+    }
+
+    public void setBlockSize(Integer size) {
+      this.blockSize = Preconditions.checkNotNull(size);
+    }
   }
 
-  public class PieceDeclarationImpl implements PieceDeclaration {
+  public static class PieceDeclarationImpl implements PieceDeclaration {
     Instant declarationTime;
     Integer pieceIndex;
 
@@ -243,5 +280,13 @@ public class PeerStateImpl implements PeerState {
 
   public Instant whenDidRemoteSendHandshake() {
     return lastRemoteHandshakeSentAt;
+  }
+
+  public ImmutableList<PieceDeclaration> localHasPieces() {
+    return ImmutableList.copyOf(localDeclaredPieces);
+  }
+
+  public void setLocalHasPiece(PieceDeclaration declaration) {
+    localDeclaredPieces.add(Preconditions.checkNotNull(declaration));
   }
 }
