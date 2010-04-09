@@ -31,6 +31,14 @@ public class PeerProviderImpl implements PeerProvider {
     }
     alreadyCalled = true;
     List<Peer> peers = Lists.newArrayList();
+    logger.info("adding seeds");
+    for (int i = 0; i < 1; i++) {
+      Peer peer = new PeerImpl(pieces);
+      logger.info(String.format("Adding seed %s", new String(peer.getId())));
+      peer.setTracker(metainfo.getTrackers().get(0));
+      peer.setMetainfo(metainfo);
+      peers.add(peer);
+    }
     logger.info("adding peers");
     for (int i = 0; i < 10; i++) {
       Peer peer = new PeerImpl();

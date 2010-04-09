@@ -15,6 +15,7 @@ import org.joda.time.Instant;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import edu.ualr.bittorrent.PeerMessage;
 import edu.ualr.bittorrent.impl.core.messages.BitFieldImpl;
@@ -64,6 +65,7 @@ public class PeerImpl implements Peer {
   private final AtomicInteger remaining = new AtomicInteger();
   private final Map<Peer, PeerState> activePeers = new ConcurrentHashMap<Peer, PeerState>();
   private final ConcurrentLinkedQueue<Peer> newlyReportedPeers = new ConcurrentLinkedQueue<Peer>();
+  private final Map<Integer, byte[]> data;
 
   @Override
   public boolean equals(Object object) {
@@ -79,12 +81,22 @@ public class PeerImpl implements Peer {
     return Objects.hashCode(this.id, this.metainfo);
   }
 
-  public PeerImpl(byte[] id) {
+  public PeerImpl(byte[] id, Map<Integer, byte[]> initialData) {
     this.id = Preconditions.checkNotNull(id);
+
+    if (initialData == null) {
+      this.data = Maps.newHashMap();
+    } else {
+      this.data = initialData;
+    }
+  }
+
+  public PeerImpl(Map<Integer, byte[]> initialData) {
+    this(UUID.randomUUID().toString().getBytes(), initialData);
   }
 
   public PeerImpl() {
-    this(UUID.randomUUID().toString().getBytes());
+    this(UUID.randomUUID().toString().getBytes(), null);
   }
 
   public void setTracker(Tracker tracker) {
