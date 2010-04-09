@@ -291,45 +291,51 @@ public class PeerImpl implements Peer {
       remote.message(new UnchokeImpl(local));
     }
 
+    private void sendHandshake() {
+      handshake();
+    }
+
     public void run() {
       logger.info("Peer talker started");
+      sendHandshake();
       while (true) {
-        PieceRequest request = new PeerStateImpl.PieceRequestImpl();
-        request.setPieceIndex(0);
-        request.setBlockOffset(0);
-        request.setBlockSize(100);
-        request.setRequestTime(new Instant());
+        if (state.whenDidRemoteSendHandshake() != null) {
+          PieceRequest request = new PeerStateImpl.PieceRequestImpl();
+          request.setPieceIndex(0);
+          request.setBlockOffset(0);
+          request.setBlockSize(100);
+          request.setRequestTime(new Instant());
 
-        PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
-        declaration.setPieceIndex(0);
-        declaration.setDeclarationTime(new Instant());
+          PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+          declaration.setPieceIndex(0);
+          declaration.setDeclarationTime(new Instant());
 
-        PieceUpload upload = new PeerStateImpl.PieceUploadImpl();
-        upload.setPieceIndex(0);
-        upload.setBlockOffset(0);
-        upload.setBlockSize(1000);
-        upload.setStartTime(new Instant());
-        upload.setCompletionTime(upload.getStartTime().plus(1000L));
+          PieceUpload upload = new PeerStateImpl.PieceUploadImpl();
+          upload.setPieceIndex(0);
+          upload.setBlockOffset(0);
+          upload.setBlockSize(1000);
+          upload.setStartTime(new Instant());
+          upload.setCompletionTime(upload.getStartTime().plus(1000L));
 
-        PieceDownload download = new PeerStateImpl.PieceDownloadImpl();
-        download.setPieceIndex(0);
-        download.setBlockOffset(0);
-        download.setBlockSize(1000);
-        download.setStartTime(new Instant());
-        download.setCompletionTime(upload.getStartTime().plus(1000L));
+          PieceDownload download = new PeerStateImpl.PieceDownloadImpl();
+          download.setPieceIndex(0);
+          download.setBlockOffset(0);
+          download.setBlockSize(1000);
+          download.setStartTime(new Instant());
+          download.setCompletionTime(upload.getStartTime().plus(1000L));
 
-        bitfield("123".getBytes());
-        cancel(request);
-        choke();
-        handshake();
-        have(declaration);
-        interested();
-        keepAlive();
-        notInterested();
-        piece(upload);
-        port(1234);
-        request(request);
-        unchoke();
+          bitfield("123".getBytes());
+          cancel(request);
+          choke();
+          have(declaration);
+          interested();
+          keepAlive();
+          notInterested();
+          piece(upload);
+          port(1234);
+          request(request);
+          unchoke();
+        }
         try {
           Thread.sleep(10000);
         } catch (InterruptedException e) {
