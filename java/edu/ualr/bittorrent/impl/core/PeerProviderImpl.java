@@ -1,6 +1,7 @@
 package edu.ualr.bittorrent.impl.core;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
@@ -17,9 +18,11 @@ public class PeerProviderImpl implements PeerProvider {
 
   private boolean alreadyCalled = false;
   private final Metainfo metainfo;
+  private final Map<Integer, byte[]> pieces;
 
-  public PeerProviderImpl(Metainfo metainfo) {
+  public PeerProviderImpl(Metainfo metainfo, Map<Integer, byte[]> pieces) {
     this.metainfo = Preconditions.checkNotNull(metainfo);
+    this.pieces = Preconditions.checkNotNull(pieces);
   }
 
   public ImmutableList<Peer> addPeers() {

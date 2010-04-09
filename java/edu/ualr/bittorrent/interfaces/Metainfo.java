@@ -65,7 +65,7 @@ public interface Metainfo {
    *
    * @return length of data chunks used to calculate piece signatures
    */
-  public Long getPieceLength();
+  public Integer getPieceLength();
 
   /**
    * Get a list of strings that represent the piece signatures for the torrent. This corresponds

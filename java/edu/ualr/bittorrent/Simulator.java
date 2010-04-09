@@ -1,7 +1,9 @@
 package edu.ualr.bittorrent;
 
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -12,6 +14,7 @@ import org.apache.log4j.Logger;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import edu.ualr.bittorrent.impl.core.MetainfoImpl;
 import edu.ualr.bittorrent.impl.core.PeerProviderImpl;
@@ -103,15 +106,34 @@ public class Simulator {
 
   public static void main(String[] args) throws NoSuchAlgorithmException {
     BasicConfigurator.configure();
-    Tracker tracker = new TrackerImpl(5000);
-    ImmutableList<Tracker> trackers = ImmutableList.of(tracker);
-    ImmutableList<String> pieces = ImmutableList.of("12345678901234567890");
-    Metainfo.File file = new MetainfoImpl.FileImpl(new Long(10L), ImmutableList.of("x.txt"));
-    ImmutableList<Metainfo.File> files = ImmutableList.of(file);
-    Metainfo metainfo = new MetainfoImpl(trackers, pieces, new Long(10L), files);
 
-    new Simulator(
-        new PeerProviderImpl(metainfo),
+    final Integer trackerRequestInterval = 5000;
+    Tracker tracker = new TrackerImpl(trackerRequestInterval);
+    ImmutableList<Tracker> trackers = ImmutableList.of(tracker);
+
+    final Integer pieceLength = 1000;
+
+    Map<Integer, byte[]> data = Maps.newHashMap();
+    List<String> pieces = Lists.newArrayList();
+
+    for (int i = 0; i < 10; i++) {
+      StringBuilder stringBuilder = new StringBuilder(pieceLength);
+      for (int j = 0; j < pieceLength; j++) {
+        stringBuilder.append('A');
+      }
+      String dataPiece = stringBuilder.toString();
+      data.put(i, dataPiece.getBytes());
+      pieces.add(new String(MessageDigest.getInstance("SHA").digest(dataPiece.getBytes())));
+    }
+
+   Metainfo.File file = new MetainfoImpl.FileImpl(
+       new Long(pieceLength * 10), ImmutableList.of("x.txt"));
+   ImmutableList<Metainfo.File> files = ImmutableList.of(file);
+
+   Metainfo metainfo = new MetainfoImpl(trackers, ImmutableList.copyOf(pieces), pieceLength, files);
+
+   new Simulator(
+        new PeerProviderImpl(metainfo, data),
         metainfo, 100
         ).runExperiment(null);
   }

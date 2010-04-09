@@ -17,11 +17,11 @@ public class MetainfoImpl implements Metainfo {
   final ImmutableList<Tracker> trackers;
   final ImmutableList<String> pieces;
   final ImmutableList<File> files;
-  final Long pieceLength;
+  final Integer pieceLength;
   final byte[] infoHash;
 
   public MetainfoImpl(ImmutableList<Tracker> trackers, ImmutableList<String> pieces,
-      Long pieceLength, ImmutableList<File> files) throws NoSuchAlgorithmException {
+      Integer pieceLength, ImmutableList<File> files) throws NoSuchAlgorithmException {
     this.trackers = Preconditions.checkNotNull(trackers);
     this.pieces = Preconditions.checkNotNull(pieces);
     this.pieceLength = Preconditions.checkNotNull(pieceLength);
@@ -95,7 +95,7 @@ public class MetainfoImpl implements Metainfo {
     return files.get(0).getName();
   }
 
-  public Long getPieceLength() {
+  public Integer getPieceLength() {
     return pieceLength;
   }
 

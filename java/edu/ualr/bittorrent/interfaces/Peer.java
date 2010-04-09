@@ -11,6 +11,4 @@ public interface Peer extends Runnable {
   public void setMetainfo(Metainfo metainfo);
 
   public void message(PeerMessage<?> message);
-
-
 }
