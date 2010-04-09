@@ -185,9 +185,21 @@ public class PeerImpl implements Peer {
     }
 
     private void bitfield(byte [] bitfield) {
-      // TODO: capture state of sent haves based on bitfield
       logger.info(String.format("Local peer %s sending bitfield message to peer %s",
           new String(local.getId()), new String(remote.getId())));
+
+      Instant now = new Instant();
+      for (int i = 0; i < bitfield.length; i++) {
+        if (bitfield[i] != 0x0) {
+          PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+          declaration.setDeclarationTime(now);
+          declaration.setPieceIndex(i);
+          state.setLocalHasPiece(declaration);
+          logger.info(String.format(
+              "Local peer %s sent bitfield message declaring piece %d to peer %s",
+              new String(local.getId()), i, new String(remote.getId())));
+        }
+      }
       remote.message(new BitFieldImpl(local, bitfield));
     }
 
@@ -340,9 +352,23 @@ public class PeerImpl implements Peer {
   }
 
   private void processBitFieldMessage(BitField bitfield) {
-    // TODO: capture state of remote haves based on bitfield
-    logger.info(String.format("Peer %s bit field by peer %s", new String(id),
-        new String(bitfield.getPeer().getId())));
+    PeerState state = activePeers.get(bitfield.getPeer());
+
+    logger.info(String.format("Remote peer %s sending bitfield message to local peer %s",
+        new String(bitfield.getPeer().getId()), new String(id)));
+
+    Instant now = new Instant();
+    for (int i = 0; i < bitfield.getBitField().length; i++) {
+      if (bitfield.getBitField()[i] != 0x0) {
+        PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+        declaration.setDeclarationTime(now);
+        declaration.setPieceIndex(i);
+        state.setRemoteHasPiece(declaration);
+        logger.info(String.format(
+            "Remote peer %s sent bitfield message declaring piece %d to peer %s",
+            new String(bitfield.getPeer().getId()), i, new String(id)));
+      }
+    }
   }
 
   private void processCancelMessage(Cancel cancel) {
