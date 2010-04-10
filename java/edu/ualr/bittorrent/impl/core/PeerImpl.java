@@ -307,11 +307,7 @@ public class PeerImpl implements Peer {
    * @param handshake
    */
   private void processHandshakeMessage(Handshake handshake) {
-    PeerState state;
-
-    synchronized (activePeers) {
-      state = activePeers.get(handshake.getPeer());
-    }
+    PeerState state = getStateForPeer(handshake.getPeer());
 
     if (state == null) {
       return;
@@ -369,11 +365,17 @@ public class PeerImpl implements Peer {
    * @param keepAlive
    */
   private void processKeepAliveMessage(KeepAlive keepAlive) {
-    PeerState state = activePeers.get(keepAlive.getPeer());
+    PeerState state = getStateForPeer(keepAlive.getPeer());
 
-    state.setRemoteSentKeepAliveAt(new Instant());
+    if (state == null) {
+      return;
+    }
 
-    logger.info(String.format("Peer %s received keep alive from peer %s", new String(id),
+    synchronized (state) {
+      state.setRemoteSentKeepAliveAt(new Instant());
+    }
+
+    logger.info(String.format("Peer %s received keep-alive from peer %s", new String(id),
         new String(keepAlive.getPeer().getId())));
   }
 
@@ -572,7 +574,7 @@ public class PeerImpl implements Peer {
     } else if (message instanceof Interested) {
     //TODO: processInterestedMessage((Interested) message);
     } else if (message instanceof KeepAlive) {
-    //TODO: processKeepAliveMessage((KeepAlive) message);
+      sendKeepAliveMessage(remotePeer, (KeepAlive) message);
     } else if (message instanceof NotInterested) {
     //TODO: processNotInterestedMessage((NotInterested) message);
     } else if (message instanceof Piece) {
@@ -656,14 +658,28 @@ public class PeerImpl implements Peer {
       state.setLocalInterestLevelInRemote(InterestLevel.INTERESTED, new Instant());
       remote.message(new InterestedImpl(local));
     }
+*/
 
-    private void keepAlive() {
-      logger.info(String.format("Local peer %s sending keep alive message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setLocalSentKeepAliveAt(new Instant());
-      remote.message(new KeepAliveImpl(local));
+    private void sendKeepAliveMessage(Peer remotePeer, KeepAlive keepAlive) {
+      logger.info(String.format("Local peer %s sending keep-alive message to peer %s",
+          new String(getId()), new String(remotePeer.getId())));
+
+      PeerState state = null;
+      synchronized(activePeers) {
+        if (activePeers.containsKey(remotePeer)) {
+          state = activePeers.get(remotePeer);
+        }
+      }
+
+      if (state != null) {
+        synchronized(state) {
+          state.setLocalSentKeepAliveAt(new Instant());
+        }
+        remotePeer.message(keepAlive);
+      }
     }
 
+/*
     private void notInterested() {
       logger.info(String.format("Local peer %s sending not interested message to peer %s",
           new String(local.getId()), new String(remote.getId())));
@@ -698,4 +714,13 @@ public class PeerImpl implements Peer {
       remote.message(new UnchokeImpl(local));
     }
     */
+    private PeerState getStateForPeer(Peer peer) {
+      PeerState state = null;
+      synchronized (activePeers) {
+        if (activePeers.containsKey(peer)) {
+          state = activePeers.get(peer);
+        }
+      }
+      return state;
+    }
 }

@@ -12,6 +12,7 @@ import com.google.common.collect.Lists;
 import com.sun.tools.javac.util.Pair;
 
 import edu.ualr.bittorrent.impl.core.messages.HandshakeImpl;
+import edu.ualr.bittorrent.impl.core.messages.KeepAliveImpl;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
@@ -65,6 +66,8 @@ public class PeerBrainsImpl implements PeerBrains {
         continue;
       }
 
+      /* If the local client hasn't sent a handshake to this peer yet, send one */
+
       Instant localSentHandshakeAt = null;
       synchronized(state) {
         localSentHandshakeAt = state.whenDidLocalSendHandshake();
@@ -75,25 +78,31 @@ public class PeerBrainsImpl implements PeerBrains {
             new String(localPeer.getId()), new String(p.getId())));
         messages.add(new Pair<Peer, Message> (p,
             new HandshakeImpl(metainfo.getInfoHash(), localPeer)));
-      } else {
 
-        Instant remoteSentHandshakeAt = null;
-        synchronized(state) {
-          remoteSentHandshakeAt = state.whenDidRemoteSendHandshake();
-        }
-
-        if (remoteSentHandshakeAt == null) {
-          logger.info(String.format("Local peer %s has not received handshake from remote peer %s",
-              new String(localPeer.getId()), new String(p.getId())));
-
-          // shake again just to be sure that the remote got ours
-          messages.add(new Pair<Peer, Message> (p,
-              new HandshakeImpl(metainfo.getInfoHash(), localPeer)));
-
-          continue;
-        }
-
+        continue;
       }
+
+      /* If the remote peer hasn't sent a handshake yet, send them another */
+
+      Instant remoteSentHandshakeAt = null;
+      synchronized(state) {
+        remoteSentHandshakeAt = state.whenDidRemoteSendHandshake();
+      }
+
+      if (remoteSentHandshakeAt == null) {
+        logger.info(String.format("Local peer %s has not received handshake from remote peer %s",
+            new String(localPeer.getId()), new String(p.getId())));
+
+        // shake again just to be sure that the remote got ours
+        messages.add(new Pair<Peer, Message> (p,
+            new HandshakeImpl(metainfo.getInfoHash(), localPeer)));
+
+        continue;
+      }
+
+
+      /* If no other messages are necessary, just send a keep alive */
+      messages.add(new Pair<Peer, Message> (p, new KeepAliveImpl(localPeer)));
     }
 
     return messages;
