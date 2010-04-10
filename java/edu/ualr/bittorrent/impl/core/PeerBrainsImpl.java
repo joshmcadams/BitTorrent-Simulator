@@ -11,6 +11,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.sun.tools.javac.util.Pair;
 
+import edu.ualr.bittorrent.impl.core.messages.ChokeImpl;
 import edu.ualr.bittorrent.impl.core.messages.HandshakeImpl;
 import edu.ualr.bittorrent.impl.core.messages.KeepAliveImpl;
 import edu.ualr.bittorrent.interfaces.Message;
@@ -18,6 +19,7 @@ import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.PeerBrains;
 import edu.ualr.bittorrent.interfaces.PeerState;
+import edu.ualr.bittorrent.interfaces.PeerState.ChokeStatus;
 
 public class PeerBrainsImpl implements PeerBrains {
   private Map<Peer, PeerState> activePeers;
@@ -100,6 +102,20 @@ public class PeerBrainsImpl implements PeerBrains {
         continue;
       }
 
+      /* If we haven't started communicating with this peer yet, then the choke status will be null.
+       * If this is the case, go ahead and send a choke message to make the initial choke state
+       * official.
+       */
+
+      Pair<ChokeStatus, Instant> choked = null;
+
+      synchronized (state) {
+        choked = state.isRemoteChoked();
+      }
+
+      if (choked == null) {
+        messages.add(new Pair<Peer, Message> (p, new ChokeImpl(localPeer)));
+      }
 
       /* If no other messages are necessary, just send a keep alive */
       messages.add(new Pair<Peer, Message> (p, new KeepAliveImpl(localPeer)));

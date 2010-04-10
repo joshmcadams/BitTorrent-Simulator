@@ -255,12 +255,18 @@ public class PeerImpl implements Peer {
    * @param choke
    */
   private void processChokeMessage(Choke choke) {
-    PeerState state = activePeers.get(choke.getPeer());
+    PeerState state = getStateForPeer(choke.getPeer());
 
-    state.setLocalIsChoked(ChokeStatus.CHOKED, new Instant());
+    if (state == null) {
+      return;
+    }
 
-    logger.info(String.format("Peer %s choked by peer %s", new String(id),
-        new String(choke.getPeer().getId())));
+    synchronized (state) {
+      state.setLocalIsChoked(ChokeStatus.CHOKED, new Instant());
+    }
+
+    logger.info(String.format("Local peer %s received choke from remote peer %s",
+        new String(id), new String(choke.getPeer().getId())));
   }
 
   /**
@@ -536,7 +542,6 @@ public class PeerImpl implements Peer {
       logger.info("Peer talker manager started");
 
       while (true) {
-
         // add new peers that have been provided to us by the tracker
         for (Peer peer : newlyReportedPeers) {
           if (!activePeers.containsKey(peer)) {
@@ -562,7 +567,7 @@ public class PeerImpl implements Peer {
     } else if (message instanceof Cancel) {
     //TODO: processCancelMessage((Cancel) message);
     } else if (message instanceof Choke) {
-    //TODO: processChokeMessage((Choke) message);
+      sendChokeMessage(remotePeer, (Choke) message);
     } else if (message instanceof Port) {
     //TODO: processPortMessage((Port) message);
     } else if (message instanceof Request) {
@@ -615,24 +620,27 @@ public class PeerImpl implements Peer {
       state.cancelLocalRequestedPiece(request);
       remote.message(new CancelImpl(local, 0, 0, 100));
     }
-
-    private void choke() {
-      logger.info(String.format("Local peer %s sending choke message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setRemoteIsChoked(ChokeStatus.CHOKED, new Instant());
-      remote.message(new ChokeImpl(local));
-    }
   */
+
+    private void sendChokeMessage(Peer remotePeer, Choke choke) {
+      logger.info(String.format("Local peer %s sending choke message to peer %s",
+          new String(getId()), new String(remotePeer.getId())));
+
+      PeerState state = getStateForPeer(remotePeer);
+
+      if (state != null) {
+        synchronized(state) {
+          state.setRemoteIsChoked(ChokeStatus.CHOKED, new Instant());
+        }
+        remotePeer.message(choke);
+      }
+    }
+
     private void sendHandshakeMessage(Peer remotePeer, Handshake handshake) {
       logger.info(String.format("Local peer %s sending handshake message to peer %s",
           new String(getId()), new String(remotePeer.getId())));
 
-      PeerState state = null;
-      synchronized(activePeers) {
-        if (activePeers.containsKey(remotePeer)) {
-          state = activePeers.get(remotePeer);
-        }
-      }
+      PeerState state = getStateForPeer(remotePeer);
 
       if (state != null) {
         synchronized(state) {
@@ -641,8 +649,6 @@ public class PeerImpl implements Peer {
         remotePeer.message(handshake);
       }
     }
-
-
 
     /*
     private void have(PieceDeclaration declaration) {
@@ -664,12 +670,7 @@ public class PeerImpl implements Peer {
       logger.info(String.format("Local peer %s sending keep-alive message to peer %s",
           new String(getId()), new String(remotePeer.getId())));
 
-      PeerState state = null;
-      synchronized(activePeers) {
-        if (activePeers.containsKey(remotePeer)) {
-          state = activePeers.get(remotePeer);
-        }
-      }
+      PeerState state = getStateForPeer(remotePeer);
 
       if (state != null) {
         synchronized(state) {
