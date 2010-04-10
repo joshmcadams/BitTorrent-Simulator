@@ -32,6 +32,7 @@ import edu.ualr.bittorrent.impl.core.messages.RequestImpl;
 import edu.ualr.bittorrent.impl.core.messages.UnchokeImpl;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
+import edu.ualr.bittorrent.interfaces.PeerBrains;
 import edu.ualr.bittorrent.interfaces.PeerState;
 import edu.ualr.bittorrent.interfaces.Tracker;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
@@ -58,6 +59,7 @@ public class PeerImpl implements Peer {
   private Tracker tracker;
   private byte[] id;
   private Metainfo metainfo;
+  private final PeerBrains brains;
   private static final Logger logger = Logger.getLogger(PeerImpl.class);
   private final List<PeerMessage<?>> messageQueue = Lists.newArrayList();
   private final AtomicInteger downloaded = new AtomicInteger();
@@ -81,8 +83,9 @@ public class PeerImpl implements Peer {
     return Objects.hashCode(this.id, this.metainfo);
   }
 
-  public PeerImpl(byte[] id, Map<Integer, byte[]> initialData) {
+  public PeerImpl(byte[] id, PeerBrains brains, Map<Integer, byte[]> initialData) {
     this.id = Preconditions.checkNotNull(id);
+    this.brains = Preconditions.checkNotNull(brains);
 
     if (initialData == null) {
       this.data = Maps.newHashMap();
@@ -91,12 +94,16 @@ public class PeerImpl implements Peer {
     }
   }
 
+  public PeerImpl(PeerBrains brains, Map<Integer, byte[]> initialData) {
+    this(UUID.randomUUID().toString().getBytes(), brains, initialData);
+  }
+
   public PeerImpl(Map<Integer, byte[]> initialData) {
-    this(UUID.randomUUID().toString().getBytes(), initialData);
+    this(UUID.randomUUID().toString().getBytes(), new PeerBrainsImpl(), initialData);
   }
 
   public PeerImpl() {
-    this(UUID.randomUUID().toString().getBytes(), null);
+    this(UUID.randomUUID().toString().getBytes(), new PeerBrainsImpl(), null);
   }
 
   public void setTracker(Tracker tracker) {
