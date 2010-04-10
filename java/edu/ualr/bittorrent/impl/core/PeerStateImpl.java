@@ -16,7 +16,8 @@ public class PeerStateImpl implements PeerState {
   Instant lastRemoteHandshakeSentAt;
   Instant lastLocalKeepAliveSentAt;
   Instant lastRemoteKeepAliveSentAt;
-  int port;
+  int localPort;
+  int remotePort;
   List<PieceRequest> piecesRequestedByRemote = Lists.newLinkedList();
   List<PieceRequest> piecesRequestedByLocal = Lists.newLinkedList();
   Pair<InterestLevel, Instant> localInterestLevelInRemote;
@@ -206,8 +207,12 @@ public class PeerStateImpl implements PeerState {
     return ImmutableList.copyOf(remoteDeclaredPieces);
   }
 
-  public int requestedPort() {
-    return port;
+  public int getRemotePort() {
+    return remotePort;
+  }
+
+  public int getLocalPort() {
+    return localPort;
   }
 
   public void setLocalInterestLevelInRemote(InterestLevel interest, Instant when) {
@@ -263,7 +268,11 @@ public class PeerStateImpl implements PeerState {
   }
 
   public void setRemoteRequestedPort(int port) {
-    this.port = Preconditions.checkNotNull(port);
+    this.remotePort = Preconditions.checkNotNull(port);
+  }
+
+  public void setLocalRequestedPort(int port) {
+    this.localPort = Preconditions.checkNotNull(port);
   }
 
   public void setRemoteSentHandshakeAt(Instant when) {

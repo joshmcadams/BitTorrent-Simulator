@@ -277,12 +277,18 @@ public class PeerImpl implements Peer {
    * @param port
    */
   private void processPortMessage(Port port) {
-    PeerState state = activePeers.get(port.getPeer());
+    PeerState state = getStateForPeer(port.getPeer());
 
-    state.setRemoteRequestedPort(port.getPort());
+    if (state == null) {
+      return;
+    }
 
-    logger.info(String.format("Peer %s received port request from peer %s", new String(id),
-        new String(port.getPeer().getId())));
+    synchronized (state) {
+      state.setRemoteRequestedPort(port.getPort());
+    }
+
+    logger.info(String.format("Local peer %s received port from remote peer %s",
+        new String(id), new String(port.getPeer().getId())));
   }
 
   /**
@@ -569,7 +575,7 @@ public class PeerImpl implements Peer {
     } else if (message instanceof Choke) {
       sendChokeMessage(remotePeer, (Choke) message);
     } else if (message instanceof Port) {
-    //TODO: processPortMessage((Port) message);
+      sendPortMessage(remotePeer, (Port) message);
     } else if (message instanceof Request) {
     //TODO: processRequestMessage((Request) message);
     } else if (message instanceof Handshake) {
@@ -695,12 +701,22 @@ public class PeerImpl implements Peer {
       remote.message(new PieceImpl(local, 0, 0, "TODO".getBytes()));
     }
 
-    private void port(int port) {
+*/
+    private void sendPortMessage(Peer remotePeer, Port port) {
       logger.info(String.format("Local peer %s sending port message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      remote.message(new PortImpl(local, port));
+          new String(getId()), new String(remotePeer.getId())));
+
+      PeerState state = getStateForPeer(remotePeer);
+
+      if (state != null) {
+        synchronized(state) {
+          state.setLocalRequestedPort(port.getPort());
+        }
+        remotePeer.message(port);
+      }
     }
 
+    /*
     private void request(PieceRequest request) {
       logger.info(String.format("Local peer %s sending request message to peer %s",
           new String(local.getId()), new String(remote.getId())));

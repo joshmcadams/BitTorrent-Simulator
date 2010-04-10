@@ -434,11 +434,24 @@ public interface PeerState {
    *
    * @param port
    */
+  void setLocalRequestedPort(int port);
+
+  /**
+   * Get the port that the remote requested to be communicated with on.
+   * @return
+   */
+  int getLocalPort();
+
+  /**
+   * Note the port that the remote requested to be communicated with on.
+   *
+   * @param port
+   */
   void setRemoteRequestedPort(int port);
 
   /**
    * Get the port that the remote requested to be communicated with on.
    * @return
    */
-  int requestedPort();
+  int getRemotePort();
 }
