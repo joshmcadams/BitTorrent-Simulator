@@ -461,17 +461,32 @@ public class PeerImpl implements Peer {
   }
 
   /**
-   * TrackerTalker
+   * The TrackerTalker object is used by {@link PeerImpl} to keep a constant thread of communication
+   * open with the given {@link Tracker}. The allows for the {@link PeerImpl} to keep the
+   * {@link Tracker} updated with the status of the {@link PeerImpl} and allows for the
+   * {@link PeerImpl} to keep a fresh list of {@link Peer}s in the swarm.
    */
   private class TrackerTalker implements Runnable {
     private final Peer parent;
     private final byte[] infoHash;
 
+    /**
+     * Creates a new {@link TrackerTalker} that can be used to keep communication flowing between
+     * the given client and a {@link Tracker}.
+     *
+     * @param parent
+     * @param infoHash
+     */
     TrackerTalker(Peer parent, byte[] infoHash) {
       this.parent = Preconditions.checkNotNull(parent);
       this.infoHash = Preconditions.checkNotNull(infoHash);
     }
 
+    /**
+     * Thread of execution that builds a request to the {@link Tracker}, sends the request, waits
+     * for the response, and then pulls the list of {@link Peers} reported by the {@link Tracker}
+     * from the response.
+     */
     public void run() {
       while (true) {
         logger.info(String.format("Peer %s contacting tracker", new String(id)));
@@ -498,6 +513,7 @@ public class PeerImpl implements Peer {
 
   /**
    * PeerTalkerManager
+   * TODO: decide if this object should hang around or if simply havine PeerBrains is enough.
    */
   private class PeerTalkerManager implements Runnable {
     private final Peer local;
