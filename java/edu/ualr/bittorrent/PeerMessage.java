@@ -3,24 +3,10 @@ package edu.ualr.bittorrent;
 import com.google.common.base.Preconditions;
 
 import edu.ualr.bittorrent.interfaces.HasPeer;
+import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Peer;
 
-public class PeerMessage<T> implements HasPeer {
-  public enum Type {
-    BIT_FIELD,
-    CANCEL,
-    CHOKE,
-    HANDSHAKE,
-    HAVE,
-    INTERESTED,
-    KEEP_ALIVE,
-    NOT_INTERESTED,
-    PIECE,
-    PORT,
-    REQUEST,
-    UNCHOKE
-  };
-
+public class PeerMessage<T> implements HasPeer, Message {
   private final Peer peer;
   private final Type type;
 

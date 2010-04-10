@@ -1,8 +1,5 @@
 package edu.ualr.bittorrent.interfaces;
 
-import edu.ualr.bittorrent.PeerMessage;
-
-
 public interface Peer extends Runnable {
   public byte[] getId();
 
@@ -10,5 +7,5 @@ public interface Peer extends Runnable {
 
   public void setMetainfo(Metainfo metainfo);
 
-  public void message(PeerMessage<?> message);
+  public void message(Message message);
 }
