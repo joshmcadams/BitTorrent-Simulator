@@ -57,7 +57,7 @@ import edu.ualr.bittorrent.interfaces.messages.Unchoke;
 
 public class PeerImpl implements Peer {
   private Tracker tracker;
-  private byte[] id;
+  private final byte[] id;
   private Metainfo metainfo;
   private final PeerBrains brains;
   private static final Logger logger = Logger.getLogger(PeerImpl.class);
@@ -69,20 +69,14 @@ public class PeerImpl implements Peer {
   private final ConcurrentLinkedQueue<Peer> newlyReportedPeers = new ConcurrentLinkedQueue<Peer>();
   private final Map<Integer, byte[]> data;
 
-  @Override
-  public boolean equals(Object object) {
-    if (!(object instanceof PeerImpl)) {
-      return false;
-    }
-    PeerImpl peer = (PeerImpl) object;
-    return Objects.equal(id, peer.id) && Objects.equal(metainfo, peer.metainfo);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hashCode(this.id, this.metainfo);
-  }
-
+  /**
+   * Create a new PeerImpl object, providing a unique ID, the brains of the peer, and some initial
+   * data related to the torrent.
+   *
+   * @param id
+   * @param brains
+   * @param initialData
+   */
   public PeerImpl(byte[] id, PeerBrains brains, Map<Integer, byte[]> initialData) {
     this.id = Preconditions.checkNotNull(id);
     this.brains = Preconditions.checkNotNull(brains);
@@ -94,26 +88,95 @@ public class PeerImpl implements Peer {
     }
   }
 
+  /**
+   * Create a new PeerImpl object, providing the brains of the peer and some initial data related to
+   * the torrent.
+   *
+   * @param brains
+   * @param initialData
+   */
   public PeerImpl(PeerBrains brains, Map<Integer, byte[]> initialData) {
     this(UUID.randomUUID().toString().getBytes(), brains, initialData);
   }
 
+  /**
+   * Create a new PeerImpl object, providing some initial data. The default {@link PeerBrainsImpl}
+   * will be used to control decision making by the peer.
+   *
+   * @param initialData
+   */
   public PeerImpl(Map<Integer, byte[]> initialData) {
     this(UUID.randomUUID().toString().getBytes(), new PeerBrainsImpl(), initialData);
   }
 
+  /**
+   * Create a new leeching PeerImpl object accepting the default {@link PeerBrainsImpl} for peer
+   * decision making.
+   */
   public PeerImpl() {
     this(UUID.randomUUID().toString().getBytes(), new PeerBrainsImpl(), null);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setTracker(Tracker tracker) {
     this.tracker = Preconditions.checkNotNull(tracker);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setMetainfo(Metainfo metainfo) {
     this.metainfo = Preconditions.checkNotNull(metainfo);
   }
 
+  /**
+   * {@inheritDoc}
+   */
+  public byte[] getId() {
+    return id;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public void message(PeerMessage<?> message) {
+    synchronized (messageQueue) {
+      messageQueue.add(message);
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean equals(Object object) {
+    if (!(object instanceof PeerImpl)) {
+      return false;
+    }
+    PeerImpl peer = (PeerImpl) object;
+    return Objects.equal(id, peer.id) && Objects.equal(metainfo, peer.metainfo);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(this.id, this.metainfo);
+  }
+
+  /**
+   * The PeerImpl is intended to run as a thread of a higher-level {@link ExecutorService}. The
+   * peer itself creates a new {@link ExecutorService} that it uses to spawn threads for parallel
+   * communication with the tracker and with other peers in the swarm.
+   *
+   * This thread loops infinitely, pulling messages off of a message queue. The message queue is
+   * populated with messages received from other peers in the swarm. The messages are processed in
+   * the sense that they are used to populate a state object. This object is used by the
+   * {@link PeerBrains} to make decisions about how this peer should act.
+   */
   public void run() {
     Preconditions.checkNotNull(tracker);
     Preconditions.checkNotNull(id);
@@ -138,6 +201,14 @@ public class PeerImpl implements Peer {
     }
   }
 
+  /**
+   * A {@link BitField} message is really just the remote peer letting the local peer know all of
+   * the pieces that it has via a single message instead of via multiple {@link Have} messages. This
+   * method parses the {@link BitField} and stores a {@link PieceDeclaration} for each piece that
+   * the remote claims to possess.
+   *
+   * @param bitfield
+   */
   private void processBitFieldMessage(BitField bitfield) {
     PeerState state = activePeers.get(bitfield.getPeer());
 
@@ -158,6 +229,12 @@ public class PeerImpl implements Peer {
     }
   }
 
+  /**
+   * After a remote peer requests a piece, it can later cancel that request by sending a cancel
+   * message. This method processes the given cancel message and notes the cancel in the peer state.
+   *
+   * @param cancel
+   */
   private void processCancelMessage(Cancel cancel) {
     PeerState state = activePeers.get(cancel.getPeer());
 
@@ -173,6 +250,12 @@ public class PeerImpl implements Peer {
         new String(cancel.getPeer().getId())));
   }
 
+  /**
+   * When choked by a remote peer, the local client should send any requests. This method notes the
+   * choke in shared state.
+   *
+   * @param choke
+   */
   private void processChokeMessage(Choke choke) {
     PeerState state = activePeers.get(choke.getPeer());
 
@@ -182,6 +265,13 @@ public class PeerImpl implements Peer {
         new String(choke.getPeer().getId())));
   }
 
+  /**
+   * In the real-world of BitTorrent, a remote peer might request communication on a specific port.
+   * This method takes note of the port request; however, since this simulator doesn't make actual
+   * network calls, the port operation does little more than update state.
+   *
+   * @param port
+   */
   private void processPortMessage(Port port) {
     PeerState state = activePeers.get(port.getPeer());
 
@@ -191,6 +281,12 @@ public class PeerImpl implements Peer {
         new String(port.getPeer().getId())));
   }
 
+  /**
+   * A request message is sent by the remote peer to request a specific piece from the local client.
+   * This method takes note of the specific request.
+   *
+   * @param request
+   */
   private void processRequestMessage(Request request) {
     PeerState state = activePeers.get(request.getPeer());
 
@@ -206,6 +302,12 @@ public class PeerImpl implements Peer {
         new String(request.getPeer().getId())));
   }
 
+  /**
+   * A handshake message is sent between peers to initiate communication. This method notes that
+   * the remote peer sent a handshake.
+   *
+   * @param handshake
+   */
   private void processHandshakeMessage(Handshake handshake) {
     PeerState state = activePeers.get(handshake.getPeer());
 
@@ -215,6 +317,12 @@ public class PeerImpl implements Peer {
         new String(handshake.getPeer().getId())));
   }
 
+  /**
+   * As a peer collects pieces, it announces the newly collected pieces to its peers. This method
+   * processes a piece announcement from a remote peer.
+   *
+   * @param have
+   */
   private void processHaveMessage(Have have) {
     PeerState state = activePeers.get(have.getPeer());
 
@@ -228,6 +336,13 @@ public class PeerImpl implements Peer {
         new String(have.getPeer().getId())));
   }
 
+  /**
+   * When a remote peer, probably a choked one, is interested in a piece that the local client has,
+   * it sends an {@link Interested} message to let the local client know that the remote is
+   * interested in what the local client has to offer. This method notes that interest.
+   *
+   * @param interested
+   */
   private void processInterestedMessage(Interested interested) {
     PeerState state = activePeers.get(interested.getPeer());
 
@@ -238,6 +353,13 @@ public class PeerImpl implements Peer {
         new String(interested.getPeer().getId())));
   }
 
+  /**
+   * Periodically, clients should send a {@link KeepAlive} message to peers in which they are
+   * connected, just to let the peers know that the client is here and communicating... it just
+   * might not have had anything interesting to say for a while.
+   *
+   * @param keepAlive
+   */
   private void processKeepAliveMessage(KeepAlive keepAlive) {
     PeerState state = activePeers.get(keepAlive.getPeer());
 
@@ -247,6 +369,13 @@ public class PeerImpl implements Peer {
         new String(keepAlive.getPeer().getId())));
   }
 
+  /**
+   * When a peer isn't interested in anything that the local client has to offer, it can tell them
+   * so using the {@link NotInterested} message. This lets the local client know that there really
+   * isn't any reason to unchoke the remote peer.
+   *
+   * @param notInterested
+   */
   private void processNotInterestedMessage(NotInterested notInterested) {
     PeerState state = activePeers.get(notInterested.getPeer());
 
@@ -256,6 +385,12 @@ public class PeerImpl implements Peer {
         new String(notInterested.getPeer().getId())));
   }
 
+  /**
+   * When a remote peer sends a piece of data to the local client, it does so via a {@link Piece}
+   * message. This method collects that piece.
+   *
+   * @param piece
+   */
   private void processPieceMessage(Piece piece) {
     PeerState state = activePeers.get(piece.getPeer());
 
@@ -272,6 +407,12 @@ public class PeerImpl implements Peer {
         new String(piece.getPeer().getId())));
   }
 
+  /**
+   * A remote peer sends an {@link Unchoke} message to the local client to let the local client
+   * know that it is okay to start sending requests for data. This method notes the unchoked state.
+   *
+   * @param unchoke
+   */
   private void processUnchokeMessage(Unchoke unchoke) {
     PeerState state = activePeers.get(unchoke.getPeer());
 
@@ -281,6 +422,12 @@ public class PeerImpl implements Peer {
         new String(unchoke.getPeer().getId())));
   }
 
+  /**
+   * Messages are received as somewhat generic {@link PeerMessage} objects. This method determines
+   * the type of {@link PeerMessage} and dispatches the message to the appropriate handler.
+   *
+   * @param message
+   */
   private void processMessage(PeerMessage<?> message) {
     if (message instanceof BitField) {
       processBitFieldMessage((BitField) message);
@@ -310,20 +457,6 @@ public class PeerImpl implements Peer {
       throw new IllegalArgumentException(String.format(
           "Peer %s sent an unsupported message of type %s", new String(message.getPeer().getId()),
           message.getType()));
-    }
-  }
-
-  public void setId(byte[] id) {
-    this.id = Preconditions.checkNotNull(id);
-  }
-
-  public byte[] getId() {
-    return id;
-  }
-
-  public void message(PeerMessage<?> message) {
-    synchronized (messageQueue) {
-      messageQueue.add(message);
     }
   }
 
