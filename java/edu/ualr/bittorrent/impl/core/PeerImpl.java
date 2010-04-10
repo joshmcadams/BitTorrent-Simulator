@@ -548,17 +548,77 @@ public class PeerImpl implements Peer {
   }
 
   /**
-   * PeerTalker
+   * The {@link PeerTalker} object is used to keep communication flowing between the local client
+   * and a {@link Peer}. The {@link PeerTalker} is responsible for sending messages from the client
+   * to the given {@link Peer}, as well as, accepting messages from the remote {@link Peer} and
+   * adding them to the inbound message queue.
    */
   private class PeerTalker implements Runnable {
     private final Peer local;
     private final Peer remote;
     private final PeerState state;
 
+    /**
+     * Creates a new {@link PeerTalker} that connects the local {@link Peer} to the remote
+     * {@link Peer}, keeping state in the provided {@link PeerState}.
+     *
+     * @param local
+     * @param remote
+     * @param state
+     */
     PeerTalker(Peer local, Peer remote, PeerState state) {
       this.local = Preconditions.checkNotNull(local);
       this.remote = Preconditions.checkNotNull(remote);
       this.state = Preconditions.checkNotNull(state);
+    }
+
+    public void run() {
+      logger.info("Peer talker started");
+      sendHandshake();
+      while (true) {
+        if (state.whenDidRemoteSendHandshake() != null) {
+          PieceRequest request = new PeerStateImpl.PieceRequestImpl();
+          request.setPieceIndex(0);
+          request.setBlockOffset(0);
+          request.setBlockSize(100);
+          request.setRequestTime(new Instant());
+
+          PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+          declaration.setPieceIndex(0);
+          declaration.setDeclarationTime(new Instant());
+
+          PieceUpload upload = new PeerStateImpl.PieceUploadImpl();
+          upload.setPieceIndex(0);
+          upload.setBlockOffset(0);
+          upload.setBlockSize(1000);
+          upload.setStartTime(new Instant());
+          upload.setCompletionTime(upload.getStartTime().plus(1000L));
+
+          PieceDownload download = new PeerStateImpl.PieceDownloadImpl();
+          download.setPieceIndex(0);
+          download.setBlockOffset(0);
+          download.setBlockSize(1000);
+          download.setStartTime(new Instant());
+          download.setCompletionTime(upload.getStartTime().plus(1000L));
+
+          bitfield("123".getBytes());
+          cancel(request);
+          choke();
+          have(declaration);
+          interested();
+          keepAlive();
+          notInterested();
+          piece(upload);
+          port(1234);
+          request(request);
+          unchoke();
+        }
+        try {
+          Thread.sleep(10000);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
     }
 
     private void bitfield(byte [] bitfield) {
@@ -658,55 +718,6 @@ public class PeerImpl implements Peer {
 
     private void sendHandshake() {
       handshake();
-    }
-
-    public void run() {
-      logger.info("Peer talker started");
-      sendHandshake();
-      while (true) {
-        if (state.whenDidRemoteSendHandshake() != null) {
-          PieceRequest request = new PeerStateImpl.PieceRequestImpl();
-          request.setPieceIndex(0);
-          request.setBlockOffset(0);
-          request.setBlockSize(100);
-          request.setRequestTime(new Instant());
-
-          PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
-          declaration.setPieceIndex(0);
-          declaration.setDeclarationTime(new Instant());
-
-          PieceUpload upload = new PeerStateImpl.PieceUploadImpl();
-          upload.setPieceIndex(0);
-          upload.setBlockOffset(0);
-          upload.setBlockSize(1000);
-          upload.setStartTime(new Instant());
-          upload.setCompletionTime(upload.getStartTime().plus(1000L));
-
-          PieceDownload download = new PeerStateImpl.PieceDownloadImpl();
-          download.setPieceIndex(0);
-          download.setBlockOffset(0);
-          download.setBlockSize(1000);
-          download.setStartTime(new Instant());
-          download.setCompletionTime(upload.getStartTime().plus(1000L));
-
-          bitfield("123".getBytes());
-          cancel(request);
-          choke();
-          have(declaration);
-          interested();
-          keepAlive();
-          notInterested();
-          piece(upload);
-          port(1234);
-          request(request);
-          unchoke();
-        }
-        try {
-          Thread.sleep(10000);
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        }
-      }
     }
   }
 
