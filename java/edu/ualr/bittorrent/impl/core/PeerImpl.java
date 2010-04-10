@@ -114,244 +114,6 @@ public class PeerImpl implements Peer {
     this.metainfo = Preconditions.checkNotNull(metainfo);
   }
 
-  /**
-   * TrackerTalker
-   */
-  private class TrackerTalker implements Runnable {
-    private final Peer parent;
-    private final byte[] infoHash;
-
-    TrackerTalker(Peer parent, byte[] infoHash) {
-      this.parent = Preconditions.checkNotNull(parent);
-      this.infoHash = Preconditions.checkNotNull(infoHash);
-    }
-
-    public void run() {
-      while (true) {
-        logger.info(String.format("Peer %s contacting tracker", new String(id)));
-        TrackerResponse response = tracker.get(
-            new TrackerRequestImpl(
-              parent,
-              infoHash,
-              downloaded.get(),
-              uploaded.get(),
-              remaining.get()
-            ));
-        logger.info(String.format("Peer %s received response from tracker", new String(id)));
-        for (Peer peer : response.getPeers()) {
-          newlyReportedPeers.add(peer);
-        }
-        try {
-          Thread.sleep(response.getInterval());
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
-  }
-
-  /**
-   * PeerTalkerManager
-   */
-  private class PeerTalkerManager implements Runnable {
-    private final Peer local;
-    private final ExecutorService executor;
-
-    PeerTalkerManager(Peer local, ExecutorService executor) {
-      this.local = Preconditions.checkNotNull(local);
-      this.executor = Preconditions.checkNotNull(executor);
-    }
-
-    public void run() {
-      logger.info("Peer talker manager started");
-      while (true) {
-        for (Peer peer : newlyReportedPeers) {
-          // TODO: add culling of dead peers
-          if (!activePeers.containsKey(peer)) {
-            logger.info(String.format("Local peer %s adding remote peer %s",
-                new String(local.getId()),
-                new String(peer.getId())));
-            PeerState state = new PeerStateImpl();
-            activePeers.put(peer, state);
-            executor.execute(new PeerTalker(local, peer, state));
-          }
-        }
-        try {
-          Thread.sleep(1000L);
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
-  }
-
-  public static class PeerStatusImpl {
-
-  }
-
-  /**
-   * PeerTalker
-   */
-  private class PeerTalker implements Runnable {
-    private final Peer local;
-    private final Peer remote;
-    private final PeerState state;
-
-    PeerTalker(Peer local, Peer remote, PeerState state) {
-      this.local = Preconditions.checkNotNull(local);
-      this.remote = Preconditions.checkNotNull(remote);
-      this.state = Preconditions.checkNotNull(state);
-    }
-
-    private void bitfield(byte [] bitfield) {
-      logger.info(String.format("Local peer %s sending bitfield message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-
-      Instant now = new Instant();
-      for (int i = 0; i < bitfield.length; i++) {
-        if (bitfield[i] != 0x0) {
-          PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
-          declaration.setDeclarationTime(now);
-          declaration.setPieceIndex(i);
-          state.setLocalHasPiece(declaration);
-          logger.info(String.format(
-              "Local peer %s sent bitfield message declaring piece %d to peer %s",
-              new String(local.getId()), i, new String(remote.getId())));
-        }
-      }
-      remote.message(new BitFieldImpl(local, bitfield));
-    }
-
-    private void cancel(PieceRequest request) {
-      logger.info(String.format("Local peer %s sending cancel message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.cancelLocalRequestedPiece(request);
-      remote.message(new CancelImpl(local, 0, 0, 100));
-    }
-
-    private void choke() {
-      logger.info(String.format("Local peer %s sending choke message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setRemoteIsChoked(ChokeStatus.CHOKED, new Instant());
-      remote.message(new ChokeImpl(local));
-    }
-
-    private void handshake() {
-      logger.info(String.format("Local peer %s sending handshake message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setRemoteSentHandshakeAt(new Instant());
-      remote.message(new HandshakeImpl(local.getId(), local));
-    }
-
-    private void have(PieceDeclaration declaration) {
-      logger.info(String.format("Local peer %s sending have message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setLocalHasPiece(declaration);
-      remote.message(new HaveImpl(local, 0));
-    }
-
-    private void interested() {
-      logger.info(String.format("Local peer %s sending interested message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setLocalInterestLevelInRemote(InterestLevel.INTERESTED, new Instant());
-      remote.message(new InterestedImpl(local));
-    }
-
-    private void keepAlive() {
-      logger.info(String.format("Local peer %s sending keep alive message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setLocalSentKeepAliveAt(new Instant());
-      remote.message(new KeepAliveImpl(local));
-    }
-
-    private void notInterested() {
-      logger.info(String.format("Local peer %s sending not interested message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setLocalInterestLevelInRemote(InterestLevel.NOT_INTERESTED, new Instant());
-      remote.message(new NotInterestedImpl(local));
-    }
-
-    private void piece(PieceUpload piece) {
-      logger.info(String.format("Local peer %s sending piece message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setLocalSentPiece(piece);
-      remote.message(new PieceImpl(local, 0, 0, "TODO".getBytes()));
-    }
-
-    private void port(int port) {
-      logger.info(String.format("Local peer %s sending port message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      remote.message(new PortImpl(local, port));
-    }
-
-    private void request(PieceRequest request) {
-      logger.info(String.format("Local peer %s sending request message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setLocalRequestedPiece(request);
-      remote.message(new RequestImpl(local, 0, 0, 100));
-    }
-
-    private void unchoke() {
-      state.setRemoteIsChoked(ChokeStatus.CHOKED, new Instant());
-      logger.info(String.format("Local peer %s sending unchoke message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      remote.message(new UnchokeImpl(local));
-    }
-
-    private void sendHandshake() {
-      handshake();
-    }
-
-    public void run() {
-      logger.info("Peer talker started");
-      sendHandshake();
-      while (true) {
-        if (state.whenDidRemoteSendHandshake() != null) {
-          PieceRequest request = new PeerStateImpl.PieceRequestImpl();
-          request.setPieceIndex(0);
-          request.setBlockOffset(0);
-          request.setBlockSize(100);
-          request.setRequestTime(new Instant());
-
-          PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
-          declaration.setPieceIndex(0);
-          declaration.setDeclarationTime(new Instant());
-
-          PieceUpload upload = new PeerStateImpl.PieceUploadImpl();
-          upload.setPieceIndex(0);
-          upload.setBlockOffset(0);
-          upload.setBlockSize(1000);
-          upload.setStartTime(new Instant());
-          upload.setCompletionTime(upload.getStartTime().plus(1000L));
-
-          PieceDownload download = new PeerStateImpl.PieceDownloadImpl();
-          download.setPieceIndex(0);
-          download.setBlockOffset(0);
-          download.setBlockSize(1000);
-          download.setStartTime(new Instant());
-          download.setCompletionTime(upload.getStartTime().plus(1000L));
-
-          bitfield("123".getBytes());
-          cancel(request);
-          choke();
-          have(declaration);
-          interested();
-          keepAlive();
-          notInterested();
-          piece(upload);
-          port(1234);
-          request(request);
-          unchoke();
-        }
-        try {
-          Thread.sleep(10000);
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
-  }
-
   public void run() {
     Preconditions.checkNotNull(tracker);
     Preconditions.checkNotNull(id);
@@ -564,4 +326,239 @@ public class PeerImpl implements Peer {
       messageQueue.add(message);
     }
   }
+
+  /**
+   * TrackerTalker
+   */
+  private class TrackerTalker implements Runnable {
+    private final Peer parent;
+    private final byte[] infoHash;
+
+    TrackerTalker(Peer parent, byte[] infoHash) {
+      this.parent = Preconditions.checkNotNull(parent);
+      this.infoHash = Preconditions.checkNotNull(infoHash);
+    }
+
+    public void run() {
+      while (true) {
+        logger.info(String.format("Peer %s contacting tracker", new String(id)));
+        TrackerResponse response = tracker.get(
+            new TrackerRequestImpl(
+              parent,
+              infoHash,
+              downloaded.get(),
+              uploaded.get(),
+              remaining.get()
+            ));
+        logger.info(String.format("Peer %s received response from tracker", new String(id)));
+        for (Peer peer : response.getPeers()) {
+          newlyReportedPeers.add(peer);
+        }
+        try {
+          Thread.sleep(response.getInterval());
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+  }
+
+  /**
+   * PeerTalkerManager
+   */
+  private class PeerTalkerManager implements Runnable {
+    private final Peer local;
+    private final ExecutorService executor;
+
+    PeerTalkerManager(Peer local, ExecutorService executor) {
+      this.local = Preconditions.checkNotNull(local);
+      this.executor = Preconditions.checkNotNull(executor);
+    }
+
+    public void run() {
+      logger.info("Peer talker manager started");
+      while (true) {
+        for (Peer peer : newlyReportedPeers) {
+          // TODO: add culling of dead peers
+          if (!activePeers.containsKey(peer)) {
+            logger.info(String.format("Local peer %s adding remote peer %s",
+                new String(local.getId()),
+                new String(peer.getId())));
+            PeerState state = new PeerStateImpl();
+            activePeers.put(peer, state);
+            executor.execute(new PeerTalker(local, peer, state));
+          }
+        }
+        try {
+          Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+  }
+
+  /**
+   * PeerTalker
+   */
+  private class PeerTalker implements Runnable {
+    private final Peer local;
+    private final Peer remote;
+    private final PeerState state;
+
+    PeerTalker(Peer local, Peer remote, PeerState state) {
+      this.local = Preconditions.checkNotNull(local);
+      this.remote = Preconditions.checkNotNull(remote);
+      this.state = Preconditions.checkNotNull(state);
+    }
+
+    private void bitfield(byte [] bitfield) {
+      logger.info(String.format("Local peer %s sending bitfield message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+
+      Instant now = new Instant();
+      for (int i = 0; i < bitfield.length; i++) {
+        if (bitfield[i] != 0x0) {
+          PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+          declaration.setDeclarationTime(now);
+          declaration.setPieceIndex(i);
+          state.setLocalHasPiece(declaration);
+          logger.info(String.format(
+              "Local peer %s sent bitfield message declaring piece %d to peer %s",
+              new String(local.getId()), i, new String(remote.getId())));
+        }
+      }
+      remote.message(new BitFieldImpl(local, bitfield));
+    }
+
+    private void cancel(PieceRequest request) {
+      logger.info(String.format("Local peer %s sending cancel message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.cancelLocalRequestedPiece(request);
+      remote.message(new CancelImpl(local, 0, 0, 100));
+    }
+
+    private void choke() {
+      logger.info(String.format("Local peer %s sending choke message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setRemoteIsChoked(ChokeStatus.CHOKED, new Instant());
+      remote.message(new ChokeImpl(local));
+    }
+
+    private void handshake() {
+      logger.info(String.format("Local peer %s sending handshake message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setRemoteSentHandshakeAt(new Instant());
+      remote.message(new HandshakeImpl(local.getId(), local));
+    }
+
+    private void have(PieceDeclaration declaration) {
+      logger.info(String.format("Local peer %s sending have message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setLocalHasPiece(declaration);
+      remote.message(new HaveImpl(local, 0));
+    }
+
+    private void interested() {
+      logger.info(String.format("Local peer %s sending interested message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setLocalInterestLevelInRemote(InterestLevel.INTERESTED, new Instant());
+      remote.message(new InterestedImpl(local));
+    }
+
+    private void keepAlive() {
+      logger.info(String.format("Local peer %s sending keep alive message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setLocalSentKeepAliveAt(new Instant());
+      remote.message(new KeepAliveImpl(local));
+    }
+
+    private void notInterested() {
+      logger.info(String.format("Local peer %s sending not interested message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setLocalInterestLevelInRemote(InterestLevel.NOT_INTERESTED, new Instant());
+      remote.message(new NotInterestedImpl(local));
+    }
+
+    private void piece(PieceUpload piece) {
+      logger.info(String.format("Local peer %s sending piece message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setLocalSentPiece(piece);
+      remote.message(new PieceImpl(local, 0, 0, "TODO".getBytes()));
+    }
+
+    private void port(int port) {
+      logger.info(String.format("Local peer %s sending port message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      remote.message(new PortImpl(local, port));
+    }
+
+    private void request(PieceRequest request) {
+      logger.info(String.format("Local peer %s sending request message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      state.setLocalRequestedPiece(request);
+      remote.message(new RequestImpl(local, 0, 0, 100));
+    }
+
+    private void unchoke() {
+      state.setRemoteIsChoked(ChokeStatus.CHOKED, new Instant());
+      logger.info(String.format("Local peer %s sending unchoke message to peer %s",
+          new String(local.getId()), new String(remote.getId())));
+      remote.message(new UnchokeImpl(local));
+    }
+
+    private void sendHandshake() {
+      handshake();
+    }
+
+    public void run() {
+      logger.info("Peer talker started");
+      sendHandshake();
+      while (true) {
+        if (state.whenDidRemoteSendHandshake() != null) {
+          PieceRequest request = new PeerStateImpl.PieceRequestImpl();
+          request.setPieceIndex(0);
+          request.setBlockOffset(0);
+          request.setBlockSize(100);
+          request.setRequestTime(new Instant());
+
+          PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+          declaration.setPieceIndex(0);
+          declaration.setDeclarationTime(new Instant());
+
+          PieceUpload upload = new PeerStateImpl.PieceUploadImpl();
+          upload.setPieceIndex(0);
+          upload.setBlockOffset(0);
+          upload.setBlockSize(1000);
+          upload.setStartTime(new Instant());
+          upload.setCompletionTime(upload.getStartTime().plus(1000L));
+
+          PieceDownload download = new PeerStateImpl.PieceDownloadImpl();
+          download.setPieceIndex(0);
+          download.setBlockOffset(0);
+          download.setBlockSize(1000);
+          download.setStartTime(new Instant());
+          download.setCompletionTime(upload.getStartTime().plus(1000L));
+
+          bitfield("123".getBytes());
+          cancel(request);
+          choke();
+          have(declaration);
+          interested();
+          keepAlive();
+          notInterested();
+          piece(upload);
+          port(1234);
+          request(request);
+          unchoke();
+        }
+        try {
+          Thread.sleep(10000);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+  }
+
 }
