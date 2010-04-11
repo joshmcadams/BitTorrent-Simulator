@@ -258,7 +258,9 @@ public class PeerImpl implements Peer {
     request.setBlockSize(cancel.getBlockLength());
     request.setRequestTime(new Instant());
 
-    state.cancelRemoteRequestedPiece(request);
+    synchronized (state) {
+      state.cancelRemoteRequestedPiece(request);
+    }
 
     logger.info(String.format("Peer %s canceled by peer %s", new String(id),
         new String(cancel.getPeer().getId())));
@@ -600,7 +602,7 @@ public class PeerImpl implements Peer {
     if (message instanceof BitField) {
     //TODO: processBitFieldMessage((BitField) message);
     } else if (message instanceof Cancel) {
-    //TODO: processCancelMessage((Cancel) message);
+      sendCancelMessage(remotePeer, (Cancel) message);
     } else if (message instanceof Choke) {
       sendChokeMessage(remotePeer, (Choke) message);
     } else if (message instanceof Port) {
@@ -648,14 +650,24 @@ public class PeerImpl implements Peer {
       }
       remote.message(new BitFieldImpl(local, bitfield));
     }
-
-    private void cancel(PieceRequest request) {
-      logger.info(String.format("Local peer %s sending cancel message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.cancelLocalRequestedPiece(request);
-      remote.message(new CancelImpl(local, 0, 0, 100));
-    }
   */
+
+    private void sendCancelMessage(Peer remotePeer, Cancel cancel) {
+      logger.info(String.format("Local peer %s sending cancel message to peer %s",
+          new String(getId()), new String(remotePeer.getId())));
+
+      PeerState state = getStateForPeer(remotePeer);
+
+      PieceRequest pieceRequest = new PeerStateImpl.PieceRequestImpl();
+      pieceRequest.setPieceIndex(cancel.getPieceIndex());
+      pieceRequest.setBlockOffset(cancel.getBeginningOffset());
+      pieceRequest.setBlockSize(cancel.getBlockLength());
+
+      synchronized(state) {
+        state.cancelLocalRequestedPiece(pieceRequest);
+      }
+     remotePeer.message(cancel);
+    }
 
     private void sendChokeMessage(Peer remotePeer, Choke choke) {
       logger.info(String.format("Local peer %s sending choke message to peer %s",

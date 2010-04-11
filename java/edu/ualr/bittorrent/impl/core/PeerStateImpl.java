@@ -239,7 +239,9 @@ public class PeerStateImpl implements PeerState {
   }
 
   public void cancelRemoteRequestedPiece(PieceRequest request) {
-    while (piecesRequestedByRemote.remove(Preconditions.checkNotNull(request))) { }
+    synchronized (piecesRequestedByRemote) {
+      while (piecesRequestedByRemote.remove(Preconditions.checkNotNull(request))) { }
+    }
   }
 
   public Instant whenDidLocalSendHandshake() {

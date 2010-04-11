@@ -12,6 +12,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.sun.tools.javac.util.Pair;
 
+import edu.ualr.bittorrent.impl.core.messages.CancelImpl;
 import edu.ualr.bittorrent.impl.core.messages.ChokeImpl;
 import edu.ualr.bittorrent.impl.core.messages.HandshakeImpl;
 import edu.ualr.bittorrent.impl.core.messages.HaveImpl;
@@ -119,6 +120,8 @@ public class PeerBrainsImpl implements PeerBrains {
       makeRequests(p, state, messages);
 
       sendPieces(p, state, messages);
+
+      cancelPieceRequests(p, state, messages);
 
       /* If no other messages are necessary, just send a keep alive */
       sendKeepAlive(p, state, messages);
@@ -429,6 +432,30 @@ public class PeerBrainsImpl implements PeerBrains {
     return true;
   }
 
+  private boolean cancelPieceRequests(
+      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+
+    Set<Integer> downloadedPieces;
+    ImmutableList<PieceRequest> requestedPieces;
+
+    synchronized (data) {
+      downloadedPieces = data.keySet();
+    }
+
+    synchronized (state) {
+      requestedPieces = state.getLocalRequestedPieces();
+    }
+
+    for (PieceRequest request : requestedPieces) {
+      if (downloadedPieces.contains(request.getPieceIndex())) {
+        messages.add(new Pair<Peer, Message> (remotePeer,
+            new CancelImpl(localPeer, request.getPieceIndex(), request.getBlockOffset(),
+                request.getBlockSize())));
+      }
+    }
+
+    return true;
+  }
 
   private boolean sendKeepAlive(
     Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
