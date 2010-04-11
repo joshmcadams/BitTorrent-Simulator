@@ -432,12 +432,14 @@ public class PeerImpl implements Peer {
    * @param unchoke
    */
   private void processUnchokeMessage(Unchoke unchoke) {
-    PeerState state = activePeers.get(unchoke.getPeer());
+    PeerState state = getStateForPeer(unchoke.getPeer());
 
-    state.setLocalIsChoked(ChokeStatus.CHOKED, new Instant());
+    synchronized (state) {
+      state.setLocalIsChoked(ChokeStatus.UNCHOKED, new Instant());
+    }
 
-    logger.info(String.format("Peer %s unchoked by peer %s", new String(id),
-        new String(unchoke.getPeer().getId())));
+    logger.info(String.format("Local peer %s received unchoke from remote peer %s",
+        new String(id), new String(unchoke.getPeer().getId())));
   }
 
   /**
@@ -597,7 +599,7 @@ public class PeerImpl implements Peer {
     } else if (message instanceof Piece) {
     //TODO: processPieceMessage((Piece) message);
     } else if (message instanceof Unchoke) {
-    //TODO: processUnchokeMessage((Unchoke) message);
+      sendUnchokeMessage(remotePeer, (Unchoke) message);
     } else {
       throw new IllegalArgumentException(String.format(
           "Local client %s attempting to send an unsupported message of type %s",
@@ -640,12 +642,10 @@ public class PeerImpl implements Peer {
 
       PeerState state = getStateForPeer(remotePeer);
 
-      if (state != null) {
-        synchronized(state) {
-          state.setRemoteIsChoked(ChokeStatus.CHOKED, new Instant());
-        }
-        remotePeer.message(choke);
+      synchronized(state) {
+        state.setRemoteIsChoked(ChokeStatus.CHOKED, new Instant());
       }
+      remotePeer.message(choke);
     }
 
     private void sendHandshakeMessage(Peer remotePeer, Handshake handshake) {
@@ -654,12 +654,10 @@ public class PeerImpl implements Peer {
 
       PeerState state = getStateForPeer(remotePeer);
 
-      if (state != null) {
-        synchronized(state) {
-          state.setLocalSentHandshakeAt(new Instant());
-        }
-        remotePeer.message(handshake);
+      synchronized(state) {
+        state.setLocalSentHandshakeAt(new Instant());
       }
+      remotePeer.message(handshake);
     }
 
     private void sendHaveMessage(Peer remotePeer, Have have) {
@@ -668,17 +666,15 @@ public class PeerImpl implements Peer {
 
       PeerState state = getStateForPeer(remotePeer);
 
-      if (state != null) {
-        PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
-        declaration.setPieceIndex(have.getPieceIndex());
-        declaration.setDeclarationTime(new Instant());
+      PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+      declaration.setPieceIndex(have.getPieceIndex());
+      declaration.setDeclarationTime(new Instant());
 
-        synchronized(state) {
-          state.setLocalHasPiece(declaration);
-        }
-
-        remotePeer.message(have);
+      synchronized(state) {
+        state.setLocalHasPiece(declaration);
       }
+
+      remotePeer.message(have);
     }
 
     private void sendInterestedMessage(Peer remotePeer, Interested interested) {
@@ -687,12 +683,10 @@ public class PeerImpl implements Peer {
 
       PeerState state = getStateForPeer(remotePeer);
 
-      if (state != null) {
-        synchronized(state) {
-          state.setLocalInterestLevelInRemote(InterestLevel.INTERESTED, new Instant());
-        }
-        remotePeer.message(interested);
+      synchronized(state) {
+        state.setLocalInterestLevelInRemote(InterestLevel.INTERESTED, new Instant());
       }
+      remotePeer.message(interested);
     }
 
     private void sendKeepAliveMessage(Peer remotePeer, KeepAlive keepAlive) {
@@ -701,12 +695,10 @@ public class PeerImpl implements Peer {
 
       PeerState state = getStateForPeer(remotePeer);
 
-      if (state != null) {
-        synchronized(state) {
-          state.setLocalSentKeepAliveAt(new Instant());
-        }
-        remotePeer.message(keepAlive);
+      synchronized(state) {
+        state.setLocalSentKeepAliveAt(new Instant());
       }
+      remotePeer.message(keepAlive);
     }
 
 
@@ -716,12 +708,10 @@ public class PeerImpl implements Peer {
 
       PeerState state = getStateForPeer(remotePeer);
 
-      if (state != null) {
-        synchronized(state) {
-          state.setLocalInterestLevelInRemote(InterestLevel.NOT_INTERESTED, new Instant());
-        }
-        remotePeer.message(notInterested);
+      synchronized(state) {
+        state.setLocalInterestLevelInRemote(InterestLevel.NOT_INTERESTED, new Instant());
       }
+      remotePeer.message(notInterested);
     }
 
     /*
@@ -739,12 +729,10 @@ public class PeerImpl implements Peer {
 
       PeerState state = getStateForPeer(remotePeer);
 
-      if (state != null) {
-        synchronized(state) {
-          state.setLocalRequestedPort(port.getPort());
-        }
-        remotePeer.message(port);
+      synchronized(state) {
+        state.setLocalRequestedPort(port.getPort());
       }
+      remotePeer.message(port);
     }
 
     /*
@@ -754,14 +742,21 @@ public class PeerImpl implements Peer {
       state.setLocalRequestedPiece(request);
       remote.message(new RequestImpl(local, 0, 0, 100));
     }
+*/
 
-    private void unchoke() {
-      state.setRemoteIsChoked(ChokeStatus.CHOKED, new Instant());
+    private void sendUnchokeMessage(Peer remotePeer, Unchoke unchoke) {
       logger.info(String.format("Local peer %s sending unchoke message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      remote.message(new UnchokeImpl(local));
+          new String(getId()), new String(remotePeer.getId())));
+
+      PeerState state = getStateForPeer(remotePeer);
+
+      synchronized(state) {
+        state.setRemoteIsChoked(ChokeStatus.UNCHOKED, new Instant());
+      }
+
+      remotePeer.message(unchoke);
     }
-    */
+
     private PeerState getStateForPeer(Peer peer) {
       PeerState state = null;
       synchronized (activePeers) {
