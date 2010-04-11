@@ -17,12 +17,14 @@ import edu.ualr.bittorrent.impl.core.messages.HaveImpl;
 import edu.ualr.bittorrent.impl.core.messages.InterestedImpl;
 import edu.ualr.bittorrent.impl.core.messages.KeepAliveImpl;
 import edu.ualr.bittorrent.impl.core.messages.NotInterestedImpl;
+import edu.ualr.bittorrent.impl.core.messages.UnchokeImpl;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.PeerBrains;
 import edu.ualr.bittorrent.interfaces.PeerState;
 import edu.ualr.bittorrent.interfaces.PeerState.ChokeStatus;
+import edu.ualr.bittorrent.interfaces.PeerState.InterestLevel;
 import edu.ualr.bittorrent.interfaces.PeerState.PieceDeclaration;
 
 public class PeerBrainsImpl implements PeerBrains {
@@ -31,6 +33,7 @@ public class PeerBrainsImpl implements PeerBrains {
   private Metainfo metainfo;
   private Map<Integer, byte[]> data;
   private static final Logger logger = Logger.getLogger(PeerBrainsImpl.class);
+  private static final Integer UNCHOKED_PEER_LIMIT = 100;
 
   public void setLocalPeer(Peer local) {
     this.localPeer = Preconditions.checkNotNull(local);
@@ -103,6 +106,9 @@ public class PeerBrainsImpl implements PeerBrains {
 
       /* Let peers that are choking and that have peices that we want know that we are interested */
       expressInterest(p, state, messages);
+
+      /* Unchoke some peers if there are any that seem worthy */
+      unchoke(p, state, messages);
 
       /* If no other messages are necessary, just send a keep alive */
       sendKeepAlive(p, state, messages);
@@ -245,6 +251,51 @@ public class PeerBrainsImpl implements PeerBrains {
     messages.add(new Pair<Peer, Message> (remotePeer, new NotInterestedImpl(localPeer)));
 
     return false;
+  }
+
+  private boolean unchoke(
+      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+
+    Pair<ChokeStatus, Instant> choked = null;
+    Pair<InterestLevel, Instant> interest = null;
+
+    synchronized (state) {
+      choked = state.isRemoteChoked();
+      interest = state.getRemoteInterestLevelInLocal();
+    }
+
+    if (interest == null || InterestLevel.NOT_INTERESTED.equals(interest.fst)) {
+      return false; // the peer has no desire to be unchoked
+    }
+
+    if (choked != null && ChokeStatus.UNCHOKED.equals(choked.fst)) {
+      return false; // already unchoked
+    }
+
+    Set<Peer> peers = null;
+
+    synchronized (activePeers) {
+      peers = activePeers.keySet();
+    }
+
+    int unchokedPeerCount = 0;
+    for (Peer peer : peers) {
+      PeerState peerState = null;
+      synchronized (activePeers) {
+        peerState = activePeers.get(peer);
+      }
+      if (peerState.isRemoteChoked() != null
+          && ChokeStatus.UNCHOKED.equals(peerState.isRemoteChoked().fst)) {
+        unchokedPeerCount++;
+      }
+    }
+
+    logger.info(String.format("Unchoked peer count is %d", unchokedPeerCount));
+    if (unchokedPeerCount < UNCHOKED_PEER_LIMIT) {
+      messages.add(new Pair<Peer, Message> (remotePeer, new UnchokeImpl(localPeer)));
+    }
+
+    return true;
   }
 
   private boolean sendKeepAlive(

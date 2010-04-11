@@ -364,7 +364,6 @@ public class PeerImpl implements Peer {
 
     logger.info(String.format("Local peer %s received interested from remote peer %s",
         new String(id), new String(interested.getPeer().getId())));
-    System.exit(0);
   }
 
   /**
