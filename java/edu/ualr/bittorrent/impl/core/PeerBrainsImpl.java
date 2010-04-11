@@ -98,9 +98,10 @@ public class PeerBrainsImpl implements PeerBrains {
         continue;
       }
 
-      /* If we haven't started communicating with this peer yet, then the choke status will be null.
-       * If this is the case, go ahead and send a choke message to make the initial choke state
-       * official.
+      /*
+       * If we haven't started communicating with this peer yet, then the choke
+       * status will be null. If this is the case, go ahead and send a choke
+       * message to make the initial choke state official.
        */
 
       if (sendInitialChoke(p, state, messages)) {
@@ -110,7 +111,10 @@ public class PeerBrainsImpl implements PeerBrains {
       /* Let the remote peer know about any new pieces that we might have */
       letPeerKnowAboutNewPieces(p, state, messages);
 
-      /* Let peers that are choking and that have peices that we want know that we are interested */
+      /*
+       * Let peers that are choking and that have peices that we want know that
+       * we are interested
+       */
       expressInterest(p, state, messages);
 
       /* Unchoke some peers if there are any that seem worthy */
@@ -130,49 +134,52 @@ public class PeerBrainsImpl implements PeerBrains {
     return messages;
   }
 
-  private boolean sendHandshake(
-      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+  private boolean sendHandshake(Peer remotePeer, PeerState state,
+      List<Pair<Peer, Message>> messages) {
     Instant localSentHandshakeAt = null;
-    synchronized(state) {
+    synchronized (state) {
       localSentHandshakeAt = state.whenDidLocalSendHandshake();
     }
     if (localSentHandshakeAt == null) {
-      logger.info(String.format("Queueing local peer %s to send handshake to remote peer %s",
+      logger.info(String.format(
+          "Queueing local peer %s to send handshake to remote peer %s",
           new String(localPeer.getId()), new String(remotePeer.getId())));
 
-      messages.add(new Pair<Peer, Message> (remotePeer,
-          new HandshakeImpl(metainfo.getInfoHash(), localPeer)));
+      messages.add(new Pair<Peer, Message>(remotePeer, new HandshakeImpl(
+          metainfo.getInfoHash(), localPeer)));
 
       return true;
     }
     return false;
   }
 
-  private boolean remoteHasSentHandshake(
-      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+  private boolean remoteHasSentHandshake(Peer remotePeer, PeerState state,
+      List<Pair<Peer, Message>> messages) {
     Instant remoteSentHandshakeAt = null;
-    synchronized(state) {
+    synchronized (state) {
       remoteSentHandshakeAt = state.whenDidRemoteSendHandshake();
     }
 
     if (remoteSentHandshakeAt == null) {
-      logger.info(String.format("Local peer %s has not received handshake from remote peer %s",
+      logger.info(String.format(
+          "Local peer %s has not received handshake from remote peer %s",
           new String(localPeer.getId()), new String(remotePeer.getId())));
 
       // shake again just to be sure that the remote got ours
-      logger.info(String.format("Queueing local peer %s to send handshake to remote peer %s",
+      logger.info(String.format(
+          "Queueing local peer %s to send handshake to remote peer %s",
           new String(localPeer.getId()), new String(remotePeer.getId())));
 
-      messages.add(new Pair<Peer, Message> (remotePeer,
-          new HandshakeImpl(metainfo.getInfoHash(), localPeer)));
+      messages.add(new Pair<Peer, Message>(remotePeer, new HandshakeImpl(
+          metainfo.getInfoHash(), localPeer)));
 
       return false;
     }
     return true;
   }
 
-  private boolean sendInitialChoke(
-      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+  private boolean sendInitialChoke(Peer remotePeer, PeerState state,
+      List<Pair<Peer, Message>> messages) {
     Pair<ChokeStatus, Instant> choked = null;
 
     synchronized (state) {
@@ -180,18 +187,20 @@ public class PeerBrainsImpl implements PeerBrains {
     }
 
     if (choked == null) {
-      logger.info(String.format("Queueing local peer %s to send choke to remote peer %s",
-          new String(localPeer.getId()), new String(remotePeer.getId())));
+      logger.info(String.format(
+          "Queueing local peer %s to send choke to remote peer %s", new String(
+              localPeer.getId()), new String(remotePeer.getId())));
 
-      messages.add(new Pair<Peer, Message> (remotePeer, new ChokeImpl(localPeer)));
+      messages
+          .add(new Pair<Peer, Message>(remotePeer, new ChokeImpl(localPeer)));
 
       return true;
     }
     return false;
   }
 
-  private boolean letPeerKnowAboutNewPieces(
-      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+  private boolean letPeerKnowAboutNewPieces(Peer remotePeer, PeerState state,
+      List<Pair<Peer, Message>> messages) {
 
     Set<Integer> downloadedPieces = null;
 
@@ -224,15 +233,16 @@ public class PeerBrainsImpl implements PeerBrains {
       }
       if (!declared) {
         pieceDeclared = true;
-        messages.add(new Pair<Peer, Message> (remotePeer, new HaveImpl(localPeer, pieceIndex)));
+        messages.add(new Pair<Peer, Message>(remotePeer, new HaveImpl(
+            localPeer, pieceIndex)));
       }
     }
 
     return pieceDeclared;
   }
 
-  private boolean expressInterest(
-      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+  private boolean expressInterest(Peer remotePeer, PeerState state,
+      List<Pair<Peer, Message>> messages) {
 
     Set<Integer> downloadedPieces = null;
 
@@ -249,25 +259,28 @@ public class PeerBrainsImpl implements PeerBrains {
     }
 
     if (choked != null && ChokeStatus.UNCHOKED.equals(choked.fst)) {
-      return false; // if we are already unchoked, there is no reason to express interest
+      return false; // if we are already unchoked, there is no reason to express
+                    // interest
     }
 
     if (remotePieces != null) {
       for (PieceDeclaration pieceDeclaration : remotePieces) {
         if (!downloadedPieces.contains(pieceDeclaration.getPieceIndex())) {
-          messages.add(new Pair<Peer, Message> (remotePeer, new InterestedImpl(localPeer)));
+          messages.add(new Pair<Peer, Message>(remotePeer, new InterestedImpl(
+              localPeer)));
           return true;
         }
       }
     }
 
-    messages.add(new Pair<Peer, Message> (remotePeer, new NotInterestedImpl(localPeer)));
+    messages.add(new Pair<Peer, Message>(remotePeer, new NotInterestedImpl(
+        localPeer)));
 
     return false;
   }
 
-  private boolean unchoke(
-      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+  private boolean unchoke(Peer remotePeer, PeerState state,
+      List<Pair<Peer, Message>> messages) {
 
     Pair<ChokeStatus, Instant> choked = null;
     Pair<InterestLevel, Instant> interest = null;
@@ -305,14 +318,15 @@ public class PeerBrainsImpl implements PeerBrains {
 
     logger.info(String.format("Unchoked peer count is %d", unchokedPeerCount));
     if (unchokedPeerCount < UNCHOKED_PEER_LIMIT) {
-      messages.add(new Pair<Peer, Message> (remotePeer, new UnchokeImpl(localPeer)));
+      messages.add(new Pair<Peer, Message>(remotePeer, new UnchokeImpl(
+          localPeer)));
     }
 
     return true;
   }
 
-  private boolean makeRequests(
-      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+  private boolean makeRequests(Peer remotePeer, PeerState state,
+      List<Pair<Peer, Message>> messages) {
 
     Pair<ChokeStatus, Instant> choked = null;
     List<PieceDeclaration> remotePieces = null;
@@ -340,11 +354,12 @@ public class PeerBrainsImpl implements PeerBrains {
       alreadyRequestedPieces = state.getLocalRequestedPieces();
     }
 
-    logger.info(String.format("%s has downloaded %d pieces", new String(localPeer.getId()),
-        downloadedPieces.size()));
+    logger.info(String.format("%s has downloaded %d pieces", new String(
+        localPeer.getId()), downloadedPieces.size()));
 
     for (Integer i : downloadedPieces) {
-      logger.info(String.format("%s has downloaded piece %d", new String(localPeer.getId()), i));
+      logger.info(String.format("%s has downloaded piece %d", new String(
+          localPeer.getId()), i));
     }
 
     for (PieceDeclaration piece : remotePieces) {
@@ -353,7 +368,8 @@ public class PeerBrainsImpl implements PeerBrains {
         if (alreadyRequestedPieces != null) {
           for (PieceRequest request : alreadyRequestedPieces) {
             if (request.getPieceIndex().equals(piece.getPieceIndex())
-                && request.getRequestTime().isAfter(new Instant().minus(100000L))) {
+                && request.getRequestTime().isAfter(
+                    new Instant().minus(100000L))) {
               okayToRequest = false;
               break;
             }
@@ -361,22 +377,22 @@ public class PeerBrainsImpl implements PeerBrains {
         }
 
         if (okayToRequest) {
-          messages.add(new Pair<Peer, Message> (remotePeer,
-              new RequestImpl(localPeer, piece.getPieceIndex(), 0, metainfo.getPieceLength())));
+          messages.add(new Pair<Peer, Message>(remotePeer, new RequestImpl(
+              localPeer, piece.getPieceIndex(), 0, metainfo.getPieceLength())));
         }
 
         return true;
       } else {
-        logger.info(String.format("Peer %s already has piece %d", new String(localPeer.getId()),
-            piece.getPieceIndex()));
+        logger.info(String.format("Peer %s already has piece %d", new String(
+            localPeer.getId()), piece.getPieceIndex()));
       }
     }
 
     return false;
   }
 
-  private boolean sendPieces(
-      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+  private boolean sendPieces(Peer remotePeer, PeerState state,
+      List<Pair<Peer, Message>> messages) {
 
     Pair<ChokeStatus, Instant> choked = null;
     List<PieceRequest> requestedPieces = null;
@@ -386,8 +402,10 @@ public class PeerBrainsImpl implements PeerBrains {
       requestedPieces = state.getRemoteRequestedPieces();
     }
 
-    logger.info(String.format("Remote peer %s has requested %d pieces from local peer %s",
-        new String(remotePeer.getId()), requestedPieces.size(), new String(localPeer.getId())));
+    logger.info(String.format(
+        "Remote peer %s has requested %d pieces from local peer %s",
+        new String(remotePeer.getId()), requestedPieces.size(), new String(
+            localPeer.getId())));
 
     if (requestedPieces == null || requestedPieces.size() == 0) {
       return false;
@@ -398,16 +416,20 @@ public class PeerBrainsImpl implements PeerBrains {
     }
 
     for (PieceRequest request : requestedPieces) {
-      logger.info(String.format("Remote peer %s has requested piece %s of local peer %s",
-          new String(remotePeer.getId()), request, new String(localPeer.getId())));
+      logger.info(String.format(
+          "Remote peer %s has requested piece %s of local peer %s", new String(
+              remotePeer.getId()), request, new String(localPeer.getId())));
     }
 
-    byte [] bytes = null;
+    byte[] bytes = null;
     int requestedIndex = requestedPieces.get(0).getPieceIndex();
     int requestedOffset = requestedPieces.get(0).getBlockOffset();
 
-    logger.info(String.format("Local peer %s is pulling piece %d for remote peer %s",
-        new String(localPeer.getId()), requestedIndex, new String(remotePeer.getId())));
+    logger
+        .info(String.format(
+            "Local peer %s is pulling piece %d for remote peer %s", new String(
+                localPeer.getId()), requestedIndex, new String(remotePeer
+                .getId())));
 
     synchronized (data) {
       if (data.containsKey(requestedIndex)) {
@@ -416,24 +438,28 @@ public class PeerBrainsImpl implements PeerBrains {
     }
 
     if (bytes == null) {
-      logger.info(String.format("Local peer %s could not find data for piece %d for remote peer %s",
-          new String(localPeer.getId()), requestedIndex, new String(remotePeer.getId())));
+      logger.info(String.format(
+          "Local peer %s could not find data for piece %d for remote peer %s",
+          new String(localPeer.getId()), requestedIndex, new String(remotePeer
+              .getId())));
       return false;
     }
 
-    //TODO: make the bytes match the requested size
+    // TODO: make the bytes match the requested size
 
-    logger.info(String.format("Local peer %s is sending data for piece %d for remote peer %s",
-        new String(localPeer.getId()), requestedIndex, new String(remotePeer.getId())));
+    logger.info(String.format(
+        "Local peer %s is sending data for piece %d for remote peer %s",
+        new String(localPeer.getId()), requestedIndex, new String(remotePeer
+            .getId())));
 
-    messages.add(new Pair<Peer, Message> (remotePeer,
-        new PieceImpl(localPeer, requestedIndex, requestedOffset, bytes)));
+    messages.add(new Pair<Peer, Message>(remotePeer, new PieceImpl(localPeer,
+        requestedIndex, requestedOffset, bytes)));
 
     return true;
   }
 
-  private boolean cancelPieceRequests(
-      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+  private boolean cancelPieceRequests(Peer remotePeer, PeerState state,
+      List<Pair<Peer, Message>> messages) {
 
     Set<Integer> downloadedPieces;
     ImmutableList<PieceRequest> requestedPieces;
@@ -448,18 +474,19 @@ public class PeerBrainsImpl implements PeerBrains {
 
     for (PieceRequest request : requestedPieces) {
       if (downloadedPieces.contains(request.getPieceIndex())) {
-        messages.add(new Pair<Peer, Message> (remotePeer,
-            new CancelImpl(localPeer, request.getPieceIndex(), request.getBlockOffset(),
-                request.getBlockSize())));
+        messages.add(new Pair<Peer, Message>(remotePeer, new CancelImpl(
+            localPeer, request.getPieceIndex(), request.getBlockOffset(),
+            request.getBlockSize())));
       }
     }
 
     return true;
   }
 
-  private boolean sendKeepAlive(
-    Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
-    messages.add(new Pair<Peer, Message> (remotePeer, new KeepAliveImpl(localPeer)));
+  private boolean sendKeepAlive(Peer remotePeer, PeerState state,
+      List<Pair<Peer, Message>> messages) {
+    messages.add(new Pair<Peer, Message>(remotePeer, new KeepAliveImpl(
+        localPeer)));
     return true;
   }
 }

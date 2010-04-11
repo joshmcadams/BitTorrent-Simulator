@@ -92,28 +92,29 @@ public class PeerStateImpl implements PeerState {
 
       PieceTransferImpl other = (PieceTransferImpl) object;
 
-      return
-        Objects.equal(this.pieceIndex, other.pieceIndex) &&
-        Objects.equal(this.blockOffset, other.blockOffset) &&
-        Objects.equal(this.blockSize, other.blockSize);
+      return Objects.equal(this.pieceIndex, other.pieceIndex)
+          && Objects.equal(this.blockOffset, other.blockOffset)
+          && Objects.equal(this.blockSize, other.blockSize);
     }
 
     @Override
     public String toString() {
-      return String.format("PieceTransferImpl [%d][%d][%d][%s][%s]", pieceIndex, blockOffset,
-          blockSize, startTime, completionTime);
+      return String.format("PieceTransferImpl [%d][%d][%d][%s][%s]",
+          pieceIndex, blockOffset, blockSize, startTime, completionTime);
     }
   }
 
-  public static class PieceUploadImpl extends PieceTransferImpl implements PieceUpload {
+  public static class PieceUploadImpl extends PieceTransferImpl implements
+      PieceUpload {
     @Override
     public String toString() {
-      return String.format("PieceUploadImpl [%d][%d][%d][%s][%s]", pieceIndex, blockOffset,
-          blockSize, startTime, completionTime);
+      return String.format("PieceUploadImpl [%d][%d][%d][%s][%s]", pieceIndex,
+          blockOffset, blockSize, startTime, completionTime);
     }
   }
 
-  public static class PieceDownloadImpl extends PieceTransferImpl implements PieceDownload {
+  public static class PieceDownloadImpl extends PieceTransferImpl implements
+      PieceDownload {
     boolean valid;
 
     public void setValidPiece(boolean valid) {
@@ -126,8 +127,8 @@ public class PeerStateImpl implements PeerState {
 
     @Override
     public String toString() {
-      return String.format("PieceDownloadImpl [%d][%d][%d][%s][%s][%s]", pieceIndex, blockOffset,
-          blockSize, startTime, completionTime, valid);
+      return String.format("PieceDownloadImpl [%d][%d][%d][%s][%s][%s]",
+          pieceIndex, blockOffset, blockSize, startTime, completionTime, valid);
     }
   }
 
@@ -182,16 +183,15 @@ public class PeerStateImpl implements PeerState {
 
       PieceRequestImpl other = (PieceRequestImpl) object;
 
-      return
-        Objects.equal(this.pieceIndex, other.pieceIndex) &&
-        Objects.equal(this.blockOffset, other.blockOffset) &&
-        Objects.equal(this.blockSize, other.blockSize);
+      return Objects.equal(this.pieceIndex, other.pieceIndex)
+          && Objects.equal(this.blockOffset, other.blockOffset)
+          && Objects.equal(this.blockSize, other.blockSize);
     }
 
     @Override
     public String toString() {
-      return String.format("PieceRequestImpl [%d][%d][%d][%s]", pieceIndex, blockOffset,
-          blockSize, requestTime);
+      return String.format("PieceRequestImpl [%d][%d][%d][%s]", pieceIndex,
+          blockOffset, blockSize, requestTime);
     }
   }
 
@@ -228,19 +228,23 @@ public class PeerStateImpl implements PeerState {
 
     @Override
     public String toString() {
-      return String.format("PieceDeclarationImpl [%d][%s]", pieceIndex, declarationTime);
+      return String.format("PieceDeclarationImpl [%d][%s]", pieceIndex,
+          declarationTime);
     }
   }
 
   public void cancelLocalRequestedPiece(PieceRequest request) {
     synchronized (piecesRequestedByLocal) {
-      while (piecesRequestedByLocal.remove(Preconditions.checkNotNull(request))) { }
+      while (piecesRequestedByLocal.remove(Preconditions.checkNotNull(request))) {
+      }
     }
   }
 
   public void cancelRemoteRequestedPiece(PieceRequest request) {
     synchronized (piecesRequestedByRemote) {
-      while (piecesRequestedByRemote.remove(Preconditions.checkNotNull(request))) { }
+      while (piecesRequestedByRemote
+          .remove(Preconditions.checkNotNull(request))) {
+      }
     }
   }
 
@@ -305,17 +309,13 @@ public class PeerStateImpl implements PeerState {
   }
 
   public void setLocalInterestLevelInRemote(InterestLevel interest, Instant when) {
-    localInterestLevelInRemote = new Pair<InterestLevel, Instant>(
-        Preconditions.checkNotNull(interest),
-        Preconditions.checkNotNull(when)
-    );
+    localInterestLevelInRemote = new Pair<InterestLevel, Instant>(Preconditions
+        .checkNotNull(interest), Preconditions.checkNotNull(when));
   }
 
   public void setLocalIsChoked(ChokeStatus choked, Instant when) {
-    localChokeStatus = new Pair<ChokeStatus, Instant>(
-        Preconditions.checkNotNull(choked),
-        Preconditions.checkNotNull(when)
-    );
+    localChokeStatus = new Pair<ChokeStatus, Instant>(Preconditions
+        .checkNotNull(choked), Preconditions.checkNotNull(when));
   }
 
   public void setLocalRequestedPiece(PieceRequest request) {
@@ -342,8 +342,8 @@ public class PeerStateImpl implements PeerState {
 
     synchronized (piecesRequestedByRemote) {
       while (piecesRequestedByRemote.remove(request)) {
-        logger.info(String.format("Piece %s removed from pieces requested by remote queue",
-            request));
+        logger.info(String.format(
+            "Piece %s removed from pieces requested by remote queue", request));
       }
     }
   }
@@ -353,17 +353,13 @@ public class PeerStateImpl implements PeerState {
   }
 
   public void setRemoteInterestLevelInLocal(InterestLevel interest, Instant when) {
-    remoteInterestLevelInLocal = new Pair<InterestLevel, Instant>(
-        Preconditions.checkNotNull(interest),
-        Preconditions.checkNotNull(when)
-    );
+    remoteInterestLevelInLocal = new Pair<InterestLevel, Instant>(Preconditions
+        .checkNotNull(interest), Preconditions.checkNotNull(when));
   }
 
   public void setRemoteIsChoked(ChokeStatus choked, Instant when) {
-    remoteChokeStatus = new Pair<ChokeStatus, Instant>(
-        Preconditions.checkNotNull(choked),
-        Preconditions.checkNotNull(when)
-    );
+    remoteChokeStatus = new Pair<ChokeStatus, Instant>(Preconditions
+        .checkNotNull(choked), Preconditions.checkNotNull(when));
   }
 
   public void setRemoteRequestedPiece(PieceRequest request) {
