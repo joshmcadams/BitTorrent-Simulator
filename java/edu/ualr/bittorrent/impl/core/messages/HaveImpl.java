@@ -12,7 +12,7 @@ public class HaveImpl extends PeerMessage<Have> implements Have {
     this.pieceIndex = pieceIndex;
   }
 
-  public long getPieceIndex() {
+  public int getPieceIndex() {
     return pieceIndex;
   }
 }

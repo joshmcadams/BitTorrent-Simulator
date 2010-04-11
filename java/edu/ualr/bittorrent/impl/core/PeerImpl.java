@@ -341,15 +341,21 @@ public class PeerImpl implements Peer {
    * @param have
    */
   private void processHaveMessage(Have have) {
-    PeerState state = activePeers.get(have.getPeer());
+    PeerState state = getStateForPeer(have.getPeer());
+
+    if (state == null) {
+      return;
+    }
 
     PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
-    declaration.setPieceIndex(0);
+    declaration.setPieceIndex(have.getPieceIndex());
     declaration.setDeclarationTime(new Instant());
 
-    state.setRemoteHasPiece(declaration);
+    synchronized (state) {
+      state.setRemoteHasPiece(declaration);
+    }
 
-    logger.info(String.format("Peer %s received have message from peer %s", new String(id),
+    logger.info(String.format("Peer %s received have from peer %s", new String(id),
         new String(have.getPeer().getId())));
   }
 
@@ -582,7 +588,7 @@ public class PeerImpl implements Peer {
     } else if (message instanceof Handshake) {
       sendHandshakeMessage(remotePeer, (Handshake) message);
     } else if (message instanceof Have) {
-    //TODO: processHaveMessage((Have) message);
+      sendHaveMessage(remotePeer, (Have) message);
     } else if (message instanceof Interested) {
     //TODO: processInterestedMessage((Interested) message);
     } else if (message instanceof KeepAlive) {
@@ -657,13 +663,25 @@ public class PeerImpl implements Peer {
       }
     }
 
-    /*
-    private void have(PieceDeclaration declaration) {
-      logger.info(String.format("Local peer %s sending have message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setLocalHasPiece(declaration);
-      remote.message(new HaveImpl(local, 0));
+    private void sendHaveMessage(Peer remotePeer, Have have) {
+      logger.info(String.format("Local peer %s sending handshake message to peer %s",
+          new String(getId()), new String(remotePeer.getId())));
+
+      PeerState state = getStateForPeer(remotePeer);
+
+      if (state != null) {
+        PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+        declaration.setPieceIndex(have.getPieceIndex());
+        declaration.setDeclarationTime(new Instant());
+
+        synchronized(state) {
+          state.setLocalHasPiece(declaration);
+        }
+
+        remotePeer.message(have);
+      }
     }
+    /*
 
     private void interested() {
       logger.info(String.format("Local peer %s sending interested message to peer %s",

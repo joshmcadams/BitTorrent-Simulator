@@ -13,6 +13,7 @@ import com.sun.tools.javac.util.Pair;
 
 import edu.ualr.bittorrent.impl.core.messages.ChokeImpl;
 import edu.ualr.bittorrent.impl.core.messages.HandshakeImpl;
+import edu.ualr.bittorrent.impl.core.messages.HaveImpl;
 import edu.ualr.bittorrent.impl.core.messages.KeepAliveImpl;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Metainfo;
@@ -20,6 +21,7 @@ import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.PeerBrains;
 import edu.ualr.bittorrent.interfaces.PeerState;
 import edu.ualr.bittorrent.interfaces.PeerState.ChokeStatus;
+import edu.ualr.bittorrent.interfaces.PeerState.PieceDeclaration;
 
 public class PeerBrainsImpl implements PeerBrains {
   private Map<Peer, PeerState> activePeers;
@@ -94,6 +96,9 @@ public class PeerBrainsImpl implements PeerBrains {
         continue;
       }
 
+      /* Let the remote peer know about any new pieces that we might have */
+      letPeerKnowAboutNewPieces(p, state, messages);
+
       /* If no other messages are necessary, just send a keep alive */
       sendKeepAlive(p, state, messages);
     }
@@ -159,6 +164,47 @@ public class PeerBrainsImpl implements PeerBrains {
       return true;
     }
     return false;
+  }
+
+  private boolean letPeerKnowAboutNewPieces(
+      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+
+    Set<Integer> downloadedPieces = null;
+
+    synchronized (data) {
+      downloadedPieces = data.keySet();
+    }
+
+    if (downloadedPieces == null) {
+      return false;
+    }
+
+    List<PieceDeclaration> declaredPieces = null;
+    synchronized (state) {
+      declaredPieces = state.localHasPieces();
+    }
+
+    if (declaredPieces == null) {
+      return false;
+    }
+
+    boolean pieceDeclared = false;
+
+    for (Integer pieceIndex : downloadedPieces) {
+      boolean declared = false;
+      for (PieceDeclaration piece : declaredPieces) {
+        if (pieceIndex.equals(piece.getPieceIndex())) {
+          declared = true;
+          break;
+        }
+      }
+      if (!declared) {
+        pieceDeclared = true;
+        messages.add(new Pair<Peer, Message> (remotePeer, new HaveImpl(localPeer, pieceIndex)));
+      }
+    }
+
+    return pieceDeclared;
   }
 
   private boolean sendKeepAlive(
