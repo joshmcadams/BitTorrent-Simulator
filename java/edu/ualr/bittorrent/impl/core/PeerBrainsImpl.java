@@ -17,6 +17,7 @@ import edu.ualr.bittorrent.impl.core.messages.HaveImpl;
 import edu.ualr.bittorrent.impl.core.messages.InterestedImpl;
 import edu.ualr.bittorrent.impl.core.messages.KeepAliveImpl;
 import edu.ualr.bittorrent.impl.core.messages.NotInterestedImpl;
+import edu.ualr.bittorrent.impl.core.messages.RequestImpl;
 import edu.ualr.bittorrent.impl.core.messages.UnchokeImpl;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Metainfo;
@@ -109,6 +110,9 @@ public class PeerBrainsImpl implements PeerBrains {
 
       /* Unchoke some peers if there are any that seem worthy */
       unchoke(p, state, messages);
+
+      /* request pieces from peers */
+      makeRequests(p, state, messages);
 
       /* If no other messages are necessary, just send a keep alive */
       sendKeepAlive(p, state, messages);
@@ -293,6 +297,39 @@ public class PeerBrainsImpl implements PeerBrains {
     logger.info(String.format("Unchoked peer count is %d", unchokedPeerCount));
     if (unchokedPeerCount < UNCHOKED_PEER_LIMIT) {
       messages.add(new Pair<Peer, Message> (remotePeer, new UnchokeImpl(localPeer)));
+    }
+
+    return true;
+  }
+
+  private boolean makeRequests(
+      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+
+    Pair<ChokeStatus, Instant> choked = null;
+    List<PieceDeclaration> remotePieces = null;
+
+    synchronized (state) {
+      choked = state.isLocalChoked();
+      remotePieces = state.remoteHasPieces();
+    }
+
+    if (choked == null || ChokeStatus.CHOKED.equals(choked.fst)) {
+      return false; // bummer, choked
+    }
+
+    Set<Integer> downloadedPieces = null;
+
+    synchronized (data) {
+      downloadedPieces = data.keySet();
+    }
+
+    logger.info(String.format("Remote piece count for remote peer %s is %d",
+        new String(remotePeer.getId()), remotePieces.size()));
+    for (PieceDeclaration piece : remotePieces) {
+      if (!downloadedPieces.contains(piece.getPieceIndex())) {
+        messages.add(new Pair<Peer, Message> (remotePeer,
+            new RequestImpl(localPeer, piece.getPieceIndex(), 0, metainfo.getPieceLength())));
+       }
     }
 
     return true;

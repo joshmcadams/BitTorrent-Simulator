@@ -304,7 +304,9 @@ public class PeerImpl implements Peer {
     pieceRequest.setBlockSize(request.getBlockLength());
     pieceRequest.setRequestTime(new Instant());
 
-    state.setRemoteRequestedPiece(pieceRequest);
+    synchronized (state) {
+      state.setRemoteRequestedPiece(pieceRequest);
+    }
 
     logger.info(String.format("Peer %s received request from peer %s", new String(id),
         new String(request.getPeer().getId())));
@@ -584,7 +586,7 @@ public class PeerImpl implements Peer {
     } else if (message instanceof Port) {
       sendPortMessage(remotePeer, (Port) message);
     } else if (message instanceof Request) {
-    //TODO: processRequestMessage((Request) message);
+      sendRequestMessage(remotePeer, (Request) message);
     } else if (message instanceof Handshake) {
       sendHandshakeMessage(remotePeer, (Handshake) message);
     } else if (message instanceof Have) {
@@ -734,14 +736,23 @@ public class PeerImpl implements Peer {
       remotePeer.message(port);
     }
 
-    /*
-    private void request(PieceRequest request) {
+    private void sendRequestMessage(Peer remotePeer, Request request) {
       logger.info(String.format("Local peer %s sending request message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setLocalRequestedPiece(request);
-      remote.message(new RequestImpl(local, 0, 0, 100));
+          new String(getId()), new String(remotePeer.getId())));
+
+      PeerState state = getStateForPeer(remotePeer);
+
+      PieceRequest pieceRequest = new PeerStateImpl.PieceRequestImpl();
+      pieceRequest.setPieceIndex(request.getPieceIndex());
+      pieceRequest.setBlockOffset(request.getBeginningOffset());
+      pieceRequest.setBlockSize(request.getBlockLength());
+      pieceRequest.setRequestTime(new Instant());
+
+      synchronized(state) {
+        state.setLocalRequestedPiece(pieceRequest);
+      }
+      remotePeer.message(request);
     }
-*/
 
     private void sendUnchokeMessage(Peer remotePeer, Unchoke unchoke) {
       logger.info(String.format("Local peer %s sending unchoke message to peer %s",
