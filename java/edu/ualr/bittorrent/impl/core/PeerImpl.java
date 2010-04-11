@@ -235,7 +235,9 @@ public class PeerImpl implements Peer {
         PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
         declaration.setDeclarationTime(now);
         declaration.setPieceIndex(i);
-        state.setRemoteHasPiece(declaration);
+        synchronized (state) {
+          state.setRemoteHasPiece(declaration);
+        }
         logger.info(String.format(
             "Remote peer %s sent bitfield message declaring piece %d to peer %s",
             new String(bitfield.getPeer().getId()), i, new String(id)));
@@ -600,7 +602,7 @@ public class PeerImpl implements Peer {
 
   private void sendMessage(Peer remotePeer, Message message) {
     if (message instanceof BitField) {
-    //TODO: processBitFieldMessage((BitField) message);
+      sendBitFieldMessage(remotePeer, (BitField) message);
     } else if (message instanceof Cancel) {
       sendCancelMessage(remotePeer, (Cancel) message);
     } else if (message instanceof Choke) {
@@ -631,26 +633,29 @@ public class PeerImpl implements Peer {
     }
   }
 
-  /*
-    private void bitfield(byte [] bitfield) {
-      logger.info(String.format("Local peer %s sending bitfield message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
+  private void sendBitFieldMessage(Peer remotePeer, BitField bitfield) {
+    logger.info(String.format("Local peer %s sending bitfield message to peer %s",
+        new String(getId()), new String(remotePeer.getId())));
 
-      Instant now = new Instant();
-      for (int i = 0; i < bitfield.length; i++) {
-        if (bitfield[i] != 0x0) {
-          PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
-          declaration.setDeclarationTime(now);
-          declaration.setPieceIndex(i);
-          state.setLocalHasPiece(declaration);
-          logger.info(String.format(
-              "Local peer %s sent bitfield message declaring piece %d to peer %s",
-              new String(local.getId()), i, new String(remote.getId())));
+    PeerState state = getStateForPeer(remotePeer);
+
+    Instant now = new Instant();
+    for (int i = 0; i < bitfield.getBitField().length; i++) {
+      if (bitfield.getBitField()[i] != 0x0) {
+        PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+        declaration.setDeclarationTime(now);
+        declaration.setPieceIndex(i);
+        synchronized (state) {
+          state.setRemoteHasPiece(declaration);
         }
+        logger.info(String.format(
+            "Remote peer %s sent bitfield message declaring piece %d to peer %s",
+            new String(bitfield.getPeer().getId()), i, new String(id)));
       }
-      remote.message(new BitFieldImpl(local, bitfield));
     }
-  */
+
+    remotePeer.message(bitfield);
+  }
 
     private void sendCancelMessage(Peer remotePeer, Cancel cancel) {
       logger.info(String.format("Local peer %s sending cancel message to peer %s",
@@ -666,7 +671,7 @@ public class PeerImpl implements Peer {
       synchronized(state) {
         state.cancelLocalRequestedPiece(pieceRequest);
       }
-     remotePeer.message(cancel);
+      remotePeer.message(cancel);
     }
 
     private void sendChokeMessage(Peer remotePeer, Choke choke) {
