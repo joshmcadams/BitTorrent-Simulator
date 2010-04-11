@@ -12,5 +12,7 @@ public interface PeerBrains {
 
   public void setMetainfo(Metainfo metainfo);
 
+  public void setData(Map<Integer, byte[]> data);
+
   public List<Pair<Peer, Message>> getMessagesToDispatch();
 }

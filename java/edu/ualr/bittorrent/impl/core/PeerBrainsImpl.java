@@ -25,6 +25,7 @@ public class PeerBrainsImpl implements PeerBrains {
   private Map<Peer, PeerState> activePeers;
   private Peer localPeer;
   private Metainfo metainfo;
+  private Map<Integer, byte[]> data;
   private static final Logger logger = Logger.getLogger(PeerBrainsImpl.class);
 
   public void setLocalPeer(Peer local) {
@@ -39,10 +40,15 @@ public class PeerBrainsImpl implements PeerBrains {
     this.metainfo = Preconditions.checkNotNull(metainfo);
   }
 
+  public void setData(Map<Integer, byte[]> data) {
+    this.data = Preconditions.checkNotNull(data);
+  }
+
   public List<Pair<Peer, Message>> getMessagesToDispatch() {
     Preconditions.checkNotNull(localPeer);
     Preconditions.checkNotNull(activePeers);
     Preconditions.checkNotNull(metainfo);
+    Preconditions.checkNotNull(data);
 
     List<Pair<Peer, Message>> messages = Lists.newArrayList();
 
@@ -69,36 +75,13 @@ public class PeerBrainsImpl implements PeerBrains {
       }
 
       /* If the local client hasn't sent a handshake to this peer yet, send one */
-
-      Instant localSentHandshakeAt = null;
-      synchronized(state) {
-        localSentHandshakeAt = state.whenDidLocalSendHandshake();
-      }
-
-      if (localSentHandshakeAt == null) {
-        logger.info(String.format("Queueing local peer %s to send handshake to remote peer %s",
-            new String(localPeer.getId()), new String(p.getId())));
-        messages.add(new Pair<Peer, Message> (p,
-            new HandshakeImpl(metainfo.getInfoHash(), localPeer)));
-
+      if (sendHandshake(p, state, messages)) {
         continue;
       }
 
       /* If the remote peer hasn't sent a handshake yet, send them another */
 
-      Instant remoteSentHandshakeAt = null;
-      synchronized(state) {
-        remoteSentHandshakeAt = state.whenDidRemoteSendHandshake();
-      }
-
-      if (remoteSentHandshakeAt == null) {
-        logger.info(String.format("Local peer %s has not received handshake from remote peer %s",
-            new String(localPeer.getId()), new String(p.getId())));
-
-        // shake again just to be sure that the remote got ours
-        messages.add(new Pair<Peer, Message> (p,
-            new HandshakeImpl(metainfo.getInfoHash(), localPeer)));
-
+      if (!remoteHasSentHandshake(p, state, messages)) {
         continue;
       }
 
@@ -107,20 +90,80 @@ public class PeerBrainsImpl implements PeerBrains {
        * official.
        */
 
-      Pair<ChokeStatus, Instant> choked = null;
-
-      synchronized (state) {
-        choked = state.isRemoteChoked();
-      }
-
-      if (choked == null) {
-        messages.add(new Pair<Peer, Message> (p, new ChokeImpl(localPeer)));
+      if (sendInitialChoke(p, state, messages)) {
+        continue;
       }
 
       /* If no other messages are necessary, just send a keep alive */
-      messages.add(new Pair<Peer, Message> (p, new KeepAliveImpl(localPeer)));
+      sendKeepAlive(p, state, messages);
     }
 
     return messages;
+  }
+
+  private boolean sendHandshake(
+      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+    Instant localSentHandshakeAt = null;
+    synchronized(state) {
+      localSentHandshakeAt = state.whenDidLocalSendHandshake();
+    }
+    if (localSentHandshakeAt == null) {
+      logger.info(String.format("Queueing local peer %s to send handshake to remote peer %s",
+          new String(localPeer.getId()), new String(remotePeer.getId())));
+
+      messages.add(new Pair<Peer, Message> (remotePeer,
+          new HandshakeImpl(metainfo.getInfoHash(), localPeer)));
+
+      return true;
+    }
+    return false;
+  }
+
+  private boolean remoteHasSentHandshake(
+      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+    Instant remoteSentHandshakeAt = null;
+    synchronized(state) {
+      remoteSentHandshakeAt = state.whenDidRemoteSendHandshake();
+    }
+
+    if (remoteSentHandshakeAt == null) {
+      logger.info(String.format("Local peer %s has not received handshake from remote peer %s",
+          new String(localPeer.getId()), new String(remotePeer.getId())));
+
+      // shake again just to be sure that the remote got ours
+      logger.info(String.format("Queueing local peer %s to send handshake to remote peer %s",
+          new String(localPeer.getId()), new String(remotePeer.getId())));
+
+      messages.add(new Pair<Peer, Message> (remotePeer,
+          new HandshakeImpl(metainfo.getInfoHash(), localPeer)));
+
+      return false;
+    }
+    return true;
+  }
+
+  private boolean sendInitialChoke(
+      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+    Pair<ChokeStatus, Instant> choked = null;
+
+    synchronized (state) {
+      choked = state.isRemoteChoked();
+    }
+
+    if (choked == null) {
+      logger.info(String.format("Queueing local peer %s to send choke to remote peer %s",
+          new String(localPeer.getId()), new String(remotePeer.getId())));
+
+      messages.add(new Pair<Peer, Message> (remotePeer, new ChokeImpl(localPeer)));
+
+      return true;
+    }
+    return false;
+  }
+
+  private boolean sendKeepAlive(
+    Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+    messages.add(new Pair<Peer, Message> (remotePeer, new KeepAliveImpl(localPeer)));
+    return true;
   }
 }

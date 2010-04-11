@@ -174,6 +174,7 @@ public class PeerImpl implements Peer {
     brains.setActivePeers(activePeers);
     brains.setLocalPeer(this);
     brains.setMetainfo(metainfo);
+    brains.setData(data);
 
     logger.info(String.format("Peer %s running", new String(id)));
 
