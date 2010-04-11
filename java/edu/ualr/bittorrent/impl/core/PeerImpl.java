@@ -436,10 +436,14 @@ public class PeerImpl implements Peer {
 
     synchronized (data) {
       data.put(piece.getPieceIndex(), piece.getBlock());
+
+      for (Integer key : data.keySet()) {
+        logger.info(String.format("Peer %s now has piece %d", new String(this.getId()), key));
+      }
     }
 
-    logger.info(String.format("Peer %s received piece from peer %s", new String(id),
-        new String(piece.getPeer().getId())));
+    logger.info(String.format("Peer %s received piece %d from peer %s", new String(id),
+        piece.getPieceIndex(), new String(piece.getPeer().getId())));
   }
 
   /**

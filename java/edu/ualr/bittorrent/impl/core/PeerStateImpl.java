@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.joda.time.Instant;
 
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -77,9 +78,40 @@ public class PeerStateImpl implements PeerState {
     public void setBlockSize(Integer size) {
       this.blockSize = Preconditions.checkNotNull(size);
     }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(pieceIndex, blockOffset, blockSize);
+    }
+
+    @Override
+    public boolean equals(Object object) {
+      if (!(object instanceof PieceTransferImpl)) {
+        return false;
+      }
+
+      PieceTransferImpl other = (PieceTransferImpl) object;
+
+      return
+        Objects.equal(this.pieceIndex, other.pieceIndex) &&
+        Objects.equal(this.blockOffset, other.blockOffset) &&
+        Objects.equal(this.blockSize, other.blockSize);
+    }
+
+    @Override
+    public String toString() {
+      return String.format("PieceTransferImpl [%d][%d][%d][%s][%s]", pieceIndex, blockOffset,
+          blockSize, startTime, completionTime);
+    }
   }
 
-  public static class PieceUploadImpl extends PieceTransferImpl implements PieceUpload { }
+  public static class PieceUploadImpl extends PieceTransferImpl implements PieceUpload {
+    @Override
+    public String toString() {
+      return String.format("PieceUploadImpl [%d][%d][%d][%s][%s]", pieceIndex, blockOffset,
+          blockSize, startTime, completionTime);
+    }
+  }
 
   public static class PieceDownloadImpl extends PieceTransferImpl implements PieceDownload {
     boolean valid;
@@ -90,6 +122,12 @@ public class PeerStateImpl implements PeerState {
 
     public boolean wasValidPiece() {
       return valid;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("PieceDownloadImpl [%d][%d][%d][%s][%s][%s]", pieceIndex, blockOffset,
+          blockSize, startTime, completionTime, valid);
     }
   }
 
@@ -130,6 +168,31 @@ public class PeerStateImpl implements PeerState {
     public void setBlockSize(Integer size) {
       this.blockSize = Preconditions.checkNotNull(size);
     }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(pieceIndex, blockOffset, blockSize);
+    }
+
+    @Override
+    public boolean equals(Object object) {
+      if (!(object instanceof PieceRequestImpl)) {
+        return false;
+      }
+
+      PieceRequestImpl other = (PieceRequestImpl) object;
+
+      return
+        Objects.equal(this.pieceIndex, other.pieceIndex) &&
+        Objects.equal(this.blockOffset, other.blockOffset) &&
+        Objects.equal(this.blockSize, other.blockSize);
+    }
+
+    @Override
+    public String toString() {
+      return String.format("PieceRequestImpl [%d][%d][%d][%s]", pieceIndex, blockOffset,
+          blockSize, requestTime);
+    }
   }
 
   public static class PieceDeclarationImpl implements PieceDeclaration {
@@ -150,6 +213,22 @@ public class PeerStateImpl implements PeerState {
 
     public void setPieceIndex(Integer index) {
       this.pieceIndex = Preconditions.checkNotNull(index);
+    }
+
+    @Override
+    public boolean equals(Object object) {
+      if (!(object instanceof PieceDeclarationImpl)) {
+        return false;
+      }
+
+      PieceDeclarationImpl other = (PieceDeclarationImpl) object;
+
+      return Objects.equal(this.pieceIndex, other.pieceIndex);
+    }
+
+    @Override
+    public String toString() {
+      return String.format("PieceDeclarationImpl [%d][%s]", pieceIndex, declarationTime);
     }
   }
 
@@ -254,19 +333,15 @@ public class PeerStateImpl implements PeerState {
   public void setLocalSentPiece(PieceUpload piece) {
     piecesUploaded.add(Preconditions.checkNotNull(piece));
 
-    List<PieceRequest> purgeList = Lists.newArrayList();
+    PieceRequest request = new PieceRequestImpl();
+    request.setPieceIndex(piece.getPieceIndex());
+    request.setBlockOffset(piece.getBlockOffset());
+    request.setBlockSize(piece.getBlockSize());
 
-    synchronized (piecesRequestedByLocal) {
-      for (PieceRequest request : piecesRequestedByLocal) {
-        if (request.getPieceIndex().equals(piece.getPieceIndex())
-            && request.getBlockOffset().equals(piece.getBlockOffset())
-            && request.getBlockSize().equals(piece.getBlockSize())) {
-          purgeList.add(request);
-        }
-      }
-      for (PieceRequest request : purgeList) {
-        logger.info(String.format("Removing request %s", request));
-        piecesRequestedByLocal.remove(request);
+    synchronized (piecesRequestedByRemote) {
+      while (piecesRequestedByRemote.remove(request)) {
+        logger.info(String.format("Piece %s removed from pieces requested by remote queue",
+            request));
       }
     }
   }

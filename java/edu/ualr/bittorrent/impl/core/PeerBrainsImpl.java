@@ -337,9 +337,15 @@ public class PeerBrainsImpl implements PeerBrains {
       alreadyRequestedPieces = state.getLocalRequestedPieces();
     }
 
+    logger.info(String.format("%s has downloaded %d pieces", new String(localPeer.getId()),
+        downloadedPieces.size()));
+
+    for (Integer i : downloadedPieces) {
+      logger.info(String.format("%s has downloaded piece %d", new String(localPeer.getId()), i));
+    }
+
     for (PieceDeclaration piece : remotePieces) {
       if (!downloadedPieces.contains(piece.getPieceIndex())) {
-
         boolean okayToRequest = true;
         if (alreadyRequestedPieces != null) {
           for (PieceRequest request : alreadyRequestedPieces) {
@@ -357,6 +363,9 @@ public class PeerBrainsImpl implements PeerBrains {
         }
 
         return true;
+      } else {
+        logger.info(String.format("Peer %s already has piece %d", new String(localPeer.getId()),
+            piece.getPieceIndex()));
       }
     }
 
@@ -374,7 +383,7 @@ public class PeerBrainsImpl implements PeerBrains {
       requestedPieces = state.getRemoteRequestedPieces();
     }
 
-    logger.info(String.format("Remote peer %s is has requested %d pieces from local peer %s",
+    logger.info(String.format("Remote peer %s has requested %d pieces from local peer %s",
         new String(remotePeer.getId()), requestedPieces.size(), new String(localPeer.getId())));
 
     if (requestedPieces == null || requestedPieces.size() == 0) {
@@ -383,6 +392,11 @@ public class PeerBrainsImpl implements PeerBrains {
 
     if (choked == null || ChokeStatus.CHOKED.equals(choked.fst)) {
       return false; // remote is choked
+    }
+
+    for (PieceRequest request : requestedPieces) {
+      logger.info(String.format("Remote peer %s has requested piece %s of local peer %s",
+          new String(remotePeer.getId()), request, new String(localPeer.getId())));
     }
 
     byte [] bytes = null;
