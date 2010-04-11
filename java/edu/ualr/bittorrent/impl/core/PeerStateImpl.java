@@ -2,6 +2,7 @@ package edu.ualr.bittorrent.impl.core;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.joda.time.Instant;
 
 import com.google.common.base.Preconditions;
@@ -28,6 +29,7 @@ public class PeerStateImpl implements PeerState {
   List<PieceUpload> piecesUploaded = Lists.newArrayList();
   List<PieceDeclaration> remoteDeclaredPieces = Lists.newArrayList();
   List<PieceDeclaration> localDeclaredPieces = Lists.newArrayList();
+  private static final Logger logger = Logger.getLogger(PeerStateImpl.class);
 
   public static class PieceTransferImpl implements PieceTransfer {
     Instant completionTime;
@@ -263,6 +265,7 @@ public class PeerStateImpl implements PeerState {
         }
       }
       for (PieceRequest request : purgeList) {
+        logger.info(String.format("Removing request %s", request));
         piecesRequestedByLocal.remove(request);
       }
     }

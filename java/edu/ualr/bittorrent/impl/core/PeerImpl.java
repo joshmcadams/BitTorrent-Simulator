@@ -187,6 +187,8 @@ public class PeerImpl implements Peer {
     // outbound peer communication
     executor.execute(new PeerTalkerManager(this));
 
+    int piecesToDownload = metainfo.getPieces().size();
+    int piecesDownloaded = 0;
     // inbound peer communication
     while (true) {
       Message message = null;
@@ -199,6 +201,16 @@ public class PeerImpl implements Peer {
       }
       if (message != null) {
         processMessage(message);
+      }
+
+      int newPiecesDownloaded = 0;
+      synchronized (data) {
+        newPiecesDownloaded = data.size();
+      }
+      if (newPiecesDownloaded != piecesDownloaded) {
+        piecesDownloaded = newPiecesDownloaded;
+        logger.info(String.format("Peer %s has downloaded %d of %d pieces", new String(id),
+            piecesDownloaded, piecesToDownload));
       }
     }
   }

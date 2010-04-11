@@ -344,7 +344,7 @@ public class PeerBrainsImpl implements PeerBrains {
         if (alreadyRequestedPieces != null) {
           for (PieceRequest request : alreadyRequestedPieces) {
             if (request.getPieceIndex().equals(piece.getPieceIndex())
-                && request.getRequestTime().isAfter(new Instant().minus(1000L))) {
+                && request.getRequestTime().isAfter(new Instant().minus(100000L))) {
               okayToRequest = false;
               break;
             }
