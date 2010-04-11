@@ -14,7 +14,9 @@ import com.sun.tools.javac.util.Pair;
 import edu.ualr.bittorrent.impl.core.messages.ChokeImpl;
 import edu.ualr.bittorrent.impl.core.messages.HandshakeImpl;
 import edu.ualr.bittorrent.impl.core.messages.HaveImpl;
+import edu.ualr.bittorrent.impl.core.messages.InterestedImpl;
 import edu.ualr.bittorrent.impl.core.messages.KeepAliveImpl;
+import edu.ualr.bittorrent.impl.core.messages.NotInterestedImpl;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
@@ -98,6 +100,9 @@ public class PeerBrainsImpl implements PeerBrains {
 
       /* Let the remote peer know about any new pieces that we might have */
       letPeerKnowAboutNewPieces(p, state, messages);
+
+      /* Let peers that are choking and that have peices that we want know that we are interested */
+      expressInterest(p, state, messages);
 
       /* If no other messages are necessary, just send a keep alive */
       sendKeepAlive(p, state, messages);
@@ -205,6 +210,41 @@ public class PeerBrainsImpl implements PeerBrains {
     }
 
     return pieceDeclared;
+  }
+
+  private boolean expressInterest(
+      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+
+    Set<Integer> downloadedPieces = null;
+
+    synchronized (data) {
+      downloadedPieces = data.keySet();
+    }
+
+    List<PieceDeclaration> remotePieces = null;
+    Pair<ChokeStatus, Instant> choked = null;
+
+    synchronized (state) {
+      choked = state.isLocalChoked();
+      remotePieces = state.remoteHasPieces();
+    }
+
+    if (choked.fst.equals(ChokeStatus.UNCHOKED)) {
+      return false; // if we are already unchoked, there is no reason to express interest
+    }
+
+    if (remotePieces != null) {
+      for (PieceDeclaration pieceDeclaration : remotePieces) {
+        if (!downloadedPieces.contains(pieceDeclaration.getPieceIndex())) {
+          messages.add(new Pair<Peer, Message> (remotePeer, new InterestedImpl(localPeer)));
+          return true;
+        }
+      }
+    }
+
+    messages.add(new Pair<Peer, Message> (remotePeer, new NotInterestedImpl(localPeer)));
+
+    return false;
   }
 
   private boolean sendKeepAlive(

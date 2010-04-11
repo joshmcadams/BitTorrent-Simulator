@@ -367,13 +367,18 @@ public class PeerImpl implements Peer {
    * @param interested
    */
   private void processInterestedMessage(Interested interested) {
-    PeerState state = activePeers.get(interested.getPeer());
+    PeerState state = getStateForPeer(interested.getPeer());
 
-    state.setRemoteInterestLevelInLocal(InterestLevel.INTERESTED, new Instant());
+    if (state == null) {
+      return;
+    }
 
-    logger.info(String.format(
-        "Peer %s received interested message from peer %s", new String(id),
-        new String(interested.getPeer().getId())));
+    synchronized (state) {
+      state.setRemoteInterestLevelInLocal(InterestLevel.INTERESTED, new Instant());
+    }
+
+    logger.info(String.format("Local peer %s received interested from remote peer %s",
+        new String(id), new String(interested.getPeer().getId())));
   }
 
   /**
@@ -406,12 +411,18 @@ public class PeerImpl implements Peer {
    * @param notInterested
    */
   private void processNotInterestedMessage(NotInterested notInterested) {
-    PeerState state = activePeers.get(notInterested.getPeer());
+    PeerState state = getStateForPeer(notInterested.getPeer());
 
-    state.setRemoteInterestLevelInLocal(InterestLevel.NOT_INTERESTED, new Instant());
+    if (state == null) {
+      return;
+    }
 
-    logger.info(String.format("Peer %s received not interested from peer %s", new String(id),
-        new String(notInterested.getPeer().getId())));
+    synchronized (state) {
+      state.setRemoteInterestLevelInLocal(InterestLevel.NOT_INTERESTED, new Instant());
+    }
+
+    logger.info(String.format("Local peer %s received not-interested from remote peer %s",
+        new String(id), new String(notInterested.getPeer().getId())));
   }
 
   /**
@@ -590,11 +601,11 @@ public class PeerImpl implements Peer {
     } else if (message instanceof Have) {
       sendHaveMessage(remotePeer, (Have) message);
     } else if (message instanceof Interested) {
-    //TODO: processInterestedMessage((Interested) message);
+      sendInterestedMessage(remotePeer, (Interested) message);
     } else if (message instanceof KeepAlive) {
       sendKeepAliveMessage(remotePeer, (KeepAlive) message);
     } else if (message instanceof NotInterested) {
-    //TODO: processNotInterestedMessage((NotInterested) message);
+      sendNotInterestedMessage(remotePeer, (NotInterested) message);
     } else if (message instanceof Piece) {
     //TODO: processPieceMessage((Piece) message);
     } else if (message instanceof Unchoke) {
@@ -681,15 +692,20 @@ public class PeerImpl implements Peer {
         remotePeer.message(have);
       }
     }
-    /*
 
-    private void interested() {
+    private void sendInterestedMessage(Peer remotePeer, Interested interested) {
       logger.info(String.format("Local peer %s sending interested message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setLocalInterestLevelInRemote(InterestLevel.INTERESTED, new Instant());
-      remote.message(new InterestedImpl(local));
+          new String(getId()), new String(remotePeer.getId())));
+
+      PeerState state = getStateForPeer(remotePeer);
+
+      if (state != null) {
+        synchronized(state) {
+          state.setLocalInterestLevelInRemote(InterestLevel.INTERESTED, new Instant());
+        }
+        remotePeer.message(interested);
+      }
     }
-*/
 
     private void sendKeepAliveMessage(Peer remotePeer, KeepAlive keepAlive) {
       logger.info(String.format("Local peer %s sending keep-alive message to peer %s",
@@ -705,14 +721,22 @@ public class PeerImpl implements Peer {
       }
     }
 
-/*
-    private void notInterested() {
-      logger.info(String.format("Local peer %s sending not interested message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setLocalInterestLevelInRemote(InterestLevel.NOT_INTERESTED, new Instant());
-      remote.message(new NotInterestedImpl(local));
+
+    private void sendNotInterestedMessage(Peer remotePeer, NotInterested notInterested) {
+      logger.info(String.format("Local peer %s sending not-interested message to peer %s",
+          new String(getId()), new String(remotePeer.getId())));
+
+      PeerState state = getStateForPeer(remotePeer);
+
+      if (state != null) {
+        synchronized(state) {
+          state.setLocalInterestLevelInRemote(InterestLevel.NOT_INTERESTED, new Instant());
+        }
+        remotePeer.message(notInterested);
+      }
     }
 
+    /*
     private void piece(PieceUpload piece) {
       logger.info(String.format("Local peer %s sending piece message to peer %s",
           new String(local.getId()), new String(remote.getId())));
