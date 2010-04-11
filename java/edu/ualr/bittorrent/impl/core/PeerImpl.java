@@ -196,6 +196,11 @@ public class PeerImpl implements Peer {
       }
       if (message != null) {
         processMessage(message);
+        try {
+          Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+          /* chomp */
+        }
       }
     }
   }
@@ -258,10 +263,6 @@ public class PeerImpl implements Peer {
   private void processChokeMessage(Choke choke) {
     PeerState state = getStateForPeer(choke.getPeer());
 
-    if (state == null) {
-      return;
-    }
-
     synchronized (state) {
       state.setLocalIsChoked(ChokeStatus.CHOKED, new Instant());
     }
@@ -279,10 +280,6 @@ public class PeerImpl implements Peer {
    */
   private void processPortMessage(Port port) {
     PeerState state = getStateForPeer(port.getPeer());
-
-    if (state == null) {
-      return;
-    }
 
     synchronized (state) {
       state.setRemoteRequestedPort(port.getPort());
@@ -322,10 +319,6 @@ public class PeerImpl implements Peer {
   private void processHandshakeMessage(Handshake handshake) {
     PeerState state = getStateForPeer(handshake.getPeer());
 
-    if (state == null) {
-      return;
-    }
-
     synchronized (state) {
       state.setRemoteSentHandshakeAt(new Instant());
     }
@@ -342,10 +335,6 @@ public class PeerImpl implements Peer {
    */
   private void processHaveMessage(Have have) {
     PeerState state = getStateForPeer(have.getPeer());
-
-    if (state == null) {
-      return;
-    }
 
     PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
     declaration.setPieceIndex(have.getPieceIndex());
@@ -369,16 +358,13 @@ public class PeerImpl implements Peer {
   private void processInterestedMessage(Interested interested) {
     PeerState state = getStateForPeer(interested.getPeer());
 
-    if (state == null) {
-      return;
-    }
-
     synchronized (state) {
       state.setRemoteInterestLevelInLocal(InterestLevel.INTERESTED, new Instant());
     }
 
     logger.info(String.format("Local peer %s received interested from remote peer %s",
         new String(id), new String(interested.getPeer().getId())));
+    System.exit(0);
   }
 
   /**
@@ -390,10 +376,6 @@ public class PeerImpl implements Peer {
    */
   private void processKeepAliveMessage(KeepAlive keepAlive) {
     PeerState state = getStateForPeer(keepAlive.getPeer());
-
-    if (state == null) {
-      return;
-    }
 
     synchronized (state) {
       state.setRemoteSentKeepAliveAt(new Instant());
@@ -412,10 +394,6 @@ public class PeerImpl implements Peer {
    */
   private void processNotInterestedMessage(NotInterested notInterested) {
     PeerState state = getStateForPeer(notInterested.getPeer());
-
-    if (state == null) {
-      return;
-    }
 
     synchronized (state) {
       state.setRemoteInterestLevelInLocal(InterestLevel.NOT_INTERESTED, new Instant());
@@ -540,7 +518,9 @@ public class PeerImpl implements Peer {
             ));
         logger.info(String.format("Peer %s received response from tracker", new String(id)));
         for (Peer peer : response.getPeers()) {
-          newlyReportedPeers.add(peer);
+          if (!parent.equals(peer)) {
+            newlyReportedPeers.add(peer);
+          }
         }
         try {
           Thread.sleep(response.getInterval());
@@ -572,7 +552,9 @@ public class PeerImpl implements Peer {
             logger.info(String.format("Local peer %s adding remote peer %s",
                 new String(local.getId()),
                 new String(peer.getId())));
-            activePeers.put(peer, new PeerStateImpl());
+            synchronized (activePeers) {
+              activePeers.put(peer, new PeerStateImpl());
+            }
           }
         }
 
@@ -580,6 +562,12 @@ public class PeerImpl implements Peer {
         // logging and dispatching each one
         for (Pair<Peer, Message> peerAndMessage : brains.getMessagesToDispatch()) {
           sendMessage(peerAndMessage.fst, peerAndMessage.snd);
+        }
+
+        try {
+          Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+          /* chomp */
         }
       }
     }
@@ -779,6 +767,11 @@ public class PeerImpl implements Peer {
       synchronized (activePeers) {
         if (activePeers.containsKey(peer)) {
           state = activePeers.get(peer);
+        } else {
+          logger.info(String.format("Local peer %s adding remote peer %s",
+              new String(getId()), new String(peer.getId())));
+          state = new PeerStateImpl();
+          activePeers.put(peer, state);
         }
       }
       return state;
