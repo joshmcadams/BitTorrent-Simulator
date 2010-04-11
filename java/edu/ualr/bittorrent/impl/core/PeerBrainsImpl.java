@@ -8,6 +8,7 @@ import org.apache.log4j.Logger;
 import org.joda.time.Instant;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.sun.tools.javac.util.Pair;
 
@@ -17,6 +18,7 @@ import edu.ualr.bittorrent.impl.core.messages.HaveImpl;
 import edu.ualr.bittorrent.impl.core.messages.InterestedImpl;
 import edu.ualr.bittorrent.impl.core.messages.KeepAliveImpl;
 import edu.ualr.bittorrent.impl.core.messages.NotInterestedImpl;
+import edu.ualr.bittorrent.impl.core.messages.PieceImpl;
 import edu.ualr.bittorrent.impl.core.messages.RequestImpl;
 import edu.ualr.bittorrent.impl.core.messages.UnchokeImpl;
 import edu.ualr.bittorrent.interfaces.Message;
@@ -27,6 +29,7 @@ import edu.ualr.bittorrent.interfaces.PeerState;
 import edu.ualr.bittorrent.interfaces.PeerState.ChokeStatus;
 import edu.ualr.bittorrent.interfaces.PeerState.InterestLevel;
 import edu.ualr.bittorrent.interfaces.PeerState.PieceDeclaration;
+import edu.ualr.bittorrent.interfaces.PeerState.PieceRequest;
 
 public class PeerBrainsImpl implements PeerBrains {
   private Map<Peer, PeerState> activePeers;
@@ -67,6 +70,7 @@ public class PeerBrainsImpl implements PeerBrains {
     }
 
     for (Peer p : peers) {
+
       if (p.equals(localPeer)) {
         continue;
       }
@@ -113,6 +117,8 @@ public class PeerBrainsImpl implements PeerBrains {
 
       /* request pieces from peers */
       makeRequests(p, state, messages);
+
+      sendPieces(p, state, messages);
 
       /* If no other messages are necessary, just send a keep alive */
       sendKeepAlive(p, state, messages);
@@ -325,15 +331,90 @@ public class PeerBrainsImpl implements PeerBrains {
 
     logger.info(String.format("Remote piece count for remote peer %s is %d",
         new String(remotePeer.getId()), remotePieces.size()));
+
+    ImmutableList<PieceRequest> alreadyRequestedPieces = null;
+    synchronized (state) {
+      alreadyRequestedPieces = state.getLocalRequestedPieces();
+    }
+
     for (PieceDeclaration piece : remotePieces) {
       if (!downloadedPieces.contains(piece.getPieceIndex())) {
-        messages.add(new Pair<Peer, Message> (remotePeer,
-            new RequestImpl(localPeer, piece.getPieceIndex(), 0, metainfo.getPieceLength())));
-       }
+
+        boolean okayToRequest = true;
+        if (alreadyRequestedPieces != null) {
+          for (PieceRequest request : alreadyRequestedPieces) {
+            if (request.getPieceIndex().equals(piece.getPieceIndex())
+                && request.getRequestTime().isAfter(new Instant().minus(1000L))) {
+              okayToRequest = false;
+              break;
+            }
+          }
+        }
+
+        if (okayToRequest) {
+          messages.add(new Pair<Peer, Message> (remotePeer,
+              new RequestImpl(localPeer, piece.getPieceIndex(), 0, metainfo.getPieceLength())));
+        }
+
+        return true;
+      }
     }
+
+    return false;
+  }
+
+  private boolean sendPieces(
+      Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
+
+    Pair<ChokeStatus, Instant> choked = null;
+    List<PieceRequest> requestedPieces = null;
+
+    synchronized (state) {
+      choked = state.isRemoteChoked();
+      requestedPieces = state.getRemoteRequestedPieces();
+    }
+
+    logger.info(String.format("Remote peer %s is has requested %d pieces from local peer %s",
+        new String(remotePeer.getId()), requestedPieces.size(), new String(localPeer.getId())));
+
+    if (requestedPieces == null || requestedPieces.size() == 0) {
+      return false;
+    }
+
+    if (choked == null || ChokeStatus.CHOKED.equals(choked.fst)) {
+      return false; // remote is choked
+    }
+
+    byte [] bytes = null;
+    int requestedIndex = requestedPieces.get(0).getPieceIndex();
+    int requestedOffset = requestedPieces.get(0).getBlockOffset();
+
+    logger.info(String.format("Local peer %s is pulling piece %d for remote peer %s",
+        new String(localPeer.getId()), requestedIndex, new String(remotePeer.getId())));
+
+    synchronized (data) {
+      if (data.containsKey(requestedIndex)) {
+        bytes = data.get(requestedIndex);
+      }
+    }
+
+    if (bytes == null) {
+      logger.info(String.format("Local peer %s could not find data for piece %d for remote peer %s",
+          new String(localPeer.getId()), requestedIndex, new String(remotePeer.getId())));
+      return false;
+    }
+
+    //TODO: make the bytes match the requested size
+
+    logger.info(String.format("Local peer %s is sending data for piece %d for remote peer %s",
+        new String(localPeer.getId()), requestedIndex, new String(remotePeer.getId())));
+
+    messages.add(new Pair<Peer, Message> (remotePeer,
+        new PieceImpl(localPeer, requestedIndex, requestedOffset, bytes)));
 
     return true;
   }
+
 
   private boolean sendKeepAlive(
     Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {

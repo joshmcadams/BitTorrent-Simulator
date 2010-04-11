@@ -31,6 +31,7 @@ import edu.ualr.bittorrent.interfaces.PeerState.InterestLevel;
 import edu.ualr.bittorrent.interfaces.PeerState.PieceDeclaration;
 import edu.ualr.bittorrent.interfaces.PeerState.PieceDownload;
 import edu.ualr.bittorrent.interfaces.PeerState.PieceRequest;
+import edu.ualr.bittorrent.interfaces.PeerState.PieceUpload;
 import edu.ualr.bittorrent.interfaces.messages.BitField;
 import edu.ualr.bittorrent.interfaces.messages.Cancel;
 import edu.ualr.bittorrent.interfaces.messages.Choke;
@@ -191,16 +192,13 @@ public class PeerImpl implements Peer {
       Message message = null;
       synchronized (messageQueue) {
         if (messageQueue.size() > 0) {
+          logger.info(String.format("Local peer %s message queue size: %d",
+              new String(this.getId()), messageQueue.size()));
           message = messageQueue.remove(0);
         }
       }
       if (message != null) {
         processMessage(message);
-        try {
-          Thread.sleep(1000L);
-        } catch (InterruptedException e) {
-          /* chomp */
-        }
       }
     }
   }
@@ -417,10 +415,16 @@ public class PeerImpl implements Peer {
     download.setPieceIndex(piece.getPieceIndex());
     download.setBlockOffset(piece.getBeginningOffset());
     download.setBlockSize(piece.getBlock().length);
-    download.setStartTime(new Instant());
+    download.setStartTime(new Instant()); // TODO: pull the original number from Message
     download.setCompletionTime(new Instant());
 
-    state.setRemoteSentPiece(download);
+    synchronized (state) {
+      state.setRemoteSentPiece(download);
+    }
+
+    synchronized (data) {
+      data.put(piece.getPieceIndex(), piece.getBlock());
+    }
 
     logger.info(String.format("Peer %s received piece from peer %s", new String(id),
         new String(piece.getPeer().getId())));
@@ -598,7 +602,7 @@ public class PeerImpl implements Peer {
     } else if (message instanceof NotInterested) {
       sendNotInterestedMessage(remotePeer, (NotInterested) message);
     } else if (message instanceof Piece) {
-    //TODO: processPieceMessage((Piece) message);
+      sendPieceMessage(remotePeer, (Piece) message);
     } else if (message instanceof Unchoke) {
       sendUnchokeMessage(remotePeer, (Unchoke) message);
     } else {
@@ -715,15 +719,25 @@ public class PeerImpl implements Peer {
       remotePeer.message(notInterested);
     }
 
-    /*
-    private void piece(PieceUpload piece) {
+    private void sendPieceMessage(Peer remotePeer, Piece piece) {
       logger.info(String.format("Local peer %s sending piece message to peer %s",
-          new String(local.getId()), new String(remote.getId())));
-      state.setLocalSentPiece(piece);
-      remote.message(new PieceImpl(local, 0, 0, "TODO".getBytes()));
+          new String(getId()), new String(remotePeer.getId())));
+
+      PeerState state = getStateForPeer(remotePeer);
+
+      PieceUpload pieceUpload = new PeerStateImpl.PieceUploadImpl();
+      pieceUpload.setPieceIndex(piece.getPieceIndex());
+      pieceUpload.setBlockOffset(piece.getBeginningOffset());
+      pieceUpload.setBlockSize(piece.getBlock().length);
+      pieceUpload.setStartTime(new Instant());
+
+      synchronized(state) {
+        state.setLocalSentPiece(pieceUpload);
+      }
+
+      remotePeer.message(piece);
     }
 
-*/
     private void sendPortMessage(Peer remotePeer, Port port) {
       logger.info(String.format("Local peer %s sending port message to peer %s",
           new String(getId()), new String(remotePeer.getId())));

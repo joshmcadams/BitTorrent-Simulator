@@ -152,7 +152,9 @@ public class PeerStateImpl implements PeerState {
   }
 
   public void cancelLocalRequestedPiece(PieceRequest request) {
-    while (piecesRequestedByLocal.remove(Preconditions.checkNotNull(request))) { }
+    synchronized (piecesRequestedByLocal) {
+      while (piecesRequestedByLocal.remove(Preconditions.checkNotNull(request))) { }
+    }
   }
 
   public void cancelRemoteRequestedPiece(PieceRequest request) {
@@ -168,7 +170,11 @@ public class PeerStateImpl implements PeerState {
   }
 
   public ImmutableList<PieceRequest> getLocalRequestedPieces() {
-    return ImmutableList.copyOf(piecesRequestedByLocal);
+    ImmutableList<PieceRequest> requested = null;
+    synchronized (piecesRequestedByLocal) {
+      requested = ImmutableList.copyOf(piecesRequestedByLocal);
+    }
+    return requested;
   }
 
   public Pair<InterestLevel, Instant> getRemoteInterestLevelInLocal() {
@@ -230,7 +236,9 @@ public class PeerStateImpl implements PeerState {
   }
 
   public void setLocalRequestedPiece(PieceRequest request) {
-    piecesRequestedByLocal.add(Preconditions.checkNotNull(request));
+    synchronized (piecesRequestedByLocal) {
+      piecesRequestedByLocal.add(Preconditions.checkNotNull(request));
+    }
   }
 
   public void setLocalSentHandshakeAt(Instant when) {
@@ -243,6 +251,21 @@ public class PeerStateImpl implements PeerState {
 
   public void setLocalSentPiece(PieceUpload piece) {
     piecesUploaded.add(Preconditions.checkNotNull(piece));
+
+    List<PieceRequest> purgeList = Lists.newArrayList();
+
+    synchronized (piecesRequestedByLocal) {
+      for (PieceRequest request : piecesRequestedByLocal) {
+        if (request.getPieceIndex().equals(piece.getPieceIndex())
+            && request.getBlockOffset().equals(piece.getBlockOffset())
+            && request.getBlockSize().equals(piece.getBlockSize())) {
+          purgeList.add(request);
+        }
+      }
+      for (PieceRequest request : purgeList) {
+        piecesRequestedByLocal.remove(request);
+      }
+    }
   }
 
   public void setRemoteHasPiece(PieceDeclaration declaration) {
