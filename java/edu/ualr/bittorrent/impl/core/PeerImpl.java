@@ -534,7 +534,7 @@ public class PeerImpl implements Peer {
 
   /**
    * PeerTalkerManager
-   * TODO: decide if this object should hang around or if simply havine PeerBrains is enough.
+   * TODO: decide if this object should hang around or if simply having PeerBrains is enough.
    */
   private class PeerTalkerManager implements Runnable {
     private final Peer local;
