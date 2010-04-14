@@ -260,7 +260,7 @@ public class PeerBrainsImpl implements PeerBrains {
 
     if (choked != null && ChokeStatus.UNCHOKED.equals(choked.fst)) {
       return false; // if we are already unchoked, there is no reason to express
-                    // interest
+      // interest
     }
 
     if (remotePieces != null) {

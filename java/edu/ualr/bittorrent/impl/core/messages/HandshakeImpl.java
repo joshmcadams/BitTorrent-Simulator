@@ -8,11 +8,14 @@ import edu.ualr.bittorrent.interfaces.messages.Handshake;
 
 public class HandshakeImpl extends PeerMessage<Handshake> implements Handshake {
   private final byte[] infoHash;
-  private final String protocolIdentifier; /* 'BitTorrent protocol' is the default */
+  private final String protocolIdentifier; /*
+                                            * 'BitTorrent protocol' is the
+                                            * default
+                                            */
   private final byte[] reservedBytes; /* 0x00 x 8 is the default */
   private static final String DEFAULT_PROTOCOL_IDENTIFIER = "BitTorrent protocol";
-  private static final byte[] DEFAULT_RESERVED_BYTES = {
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  private static final byte[] DEFAULT_RESERVED_BYTES = { 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00 };
 
   public HandshakeImpl(byte[] infoHash, Peer peer) {
     this(infoHash, peer, DEFAULT_PROTOCOL_IDENTIFIER, DEFAULT_RESERVED_BYTES);

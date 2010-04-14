@@ -39,20 +39,17 @@ public class TrackerImpl implements Tracker {
   public TrackerResponse get(TrackerRequest request) {
     Preconditions.checkNotNull(request);
     Peer peer = request.getPeer();
-    logger.info(String.format("Peer %s made a request to the tracker", new String(peer.getId())));
+    logger.info(String.format("Peer %s made a request to the tracker",
+        new String(peer.getId())));
     return buildResponse(request);
   }
 
   private TrackerResponse buildResponse(TrackerRequest request) {
     SwarmInfo swarmInfo = getSwarmInfo(request.getInfoHash());
     swarmInfo.logRequest(request);
-    TrackerResponse response = new TrackerResponseImpl(
-        id,
-        ImmutableList.copyOf(swarmInfo.getListOfPeers(request)),
-        swarmInfo.getSeederCount(),
-        swarmInfo.getLeechCount(),
-        interval
-    );
+    TrackerResponse response = new TrackerResponseImpl(id, ImmutableList
+        .copyOf(swarmInfo.getListOfPeers(request)), swarmInfo.getSeederCount(),
+        swarmInfo.getLeechCount(), interval);
     return response;
   }
 
@@ -69,9 +66,9 @@ public class TrackerImpl implements Tracker {
 
   public void run() {
     /*
-     * Default tracker doesn't do anything in its thread and instead relies on synchronized access
-     * by the peers. If the experiment calls for the tracker to actively do something in the
-     * background, this is your hook.
+     * Default tracker doesn't do anything in its thread and instead relies on
+     * synchronized access by the peers. If the experiment calls for the tracker
+     * to actively do something in the background, this is your hook.
      */
   }
 
@@ -90,9 +87,9 @@ public class TrackerImpl implements Tracker {
     }
 
     List<Peer> getListOfPeers(TrackerRequest request) {
-      final int listSize =
-        request.getNumWant() != null && PEER_REQUEST_LIMIT > request.getNumWant() ?
-        request.getNumWant() : PEER_REQUEST_LIMIT;
+      final int listSize = request.getNumWant() != null
+          && PEER_REQUEST_LIMIT > request.getNumWant() ? request.getNumWant()
+          : PEER_REQUEST_LIMIT;
 
       Map<Peer, Integer> peerMap = new HashMap<Peer, Integer>(listSize);
 
@@ -107,13 +104,15 @@ public class TrackerImpl implements Tracker {
       }
 
       if (seeders.size() + leeches.size() < PEER_REQUEST_LIMIT) {
-        return new ImmutableList.Builder<Peer>().addAll(leechKeys).addAll(seederKeys).build();
+        return new ImmutableList.Builder<Peer>().addAll(leechKeys).addAll(
+            seederKeys).build();
       }
 
-      while(peerMap.size() < PEER_REQUEST_LIMIT) {
+      while (peerMap.size() < PEER_REQUEST_LIMIT) {
         Peer peer;
         if (Math.random() < SEED_PROBABILITY && seederKeys.size() > 0) {
-          peer = seederKeys.get((int) (Math.random() * (seederKeys.size() - 1)));
+          peer = seederKeys
+              .get((int) (Math.random() * (seederKeys.size() - 1)));
         } else {
           peer = leechKeys.get((int) (Math.random() * (seederKeys.size() - 1)));
         }
@@ -123,7 +122,8 @@ public class TrackerImpl implements Tracker {
         }
       }
 
-      logger.info(String.format("Returning a list of %d peers", peerMap.keySet().size()));
+      logger.info(String.format("Returning a list of %d peers", peerMap
+          .keySet().size()));
       return ImmutableList.copyOf(peerMap.keySet());
     }
 

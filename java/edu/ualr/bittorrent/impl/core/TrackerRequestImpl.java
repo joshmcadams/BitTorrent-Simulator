@@ -5,7 +5,7 @@ import com.google.common.base.Preconditions;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.TrackerRequest;
 
-public class TrackerRequestImpl implements TrackerRequest{
+public class TrackerRequestImpl implements TrackerRequest {
   private final Peer peer;
   private final Boolean acceptsCompactResponse;
   private final int downloaded;
@@ -20,38 +20,23 @@ public class TrackerRequestImpl implements TrackerRequest{
   private final byte[] trackerId;
   private final Boolean omitPeerId;
 
-  public TrackerRequestImpl(
-      Peer peer,
-      byte[] infoHash,
-      int downloaded,
-      int uploaded,
-      int left
-  ) {
-    this(peer, infoHash, downloaded, uploaded, left,
-        null, null, null, null, null, null, null, null);
+  public TrackerRequestImpl(Peer peer, byte[] infoHash, int downloaded,
+      int uploaded, int left) {
+    this(peer, infoHash, downloaded, uploaded, left, null, null, null, null,
+        null, null, null, null);
   }
 
-  public TrackerRequestImpl(
-      Peer peer,
-      byte[] infoHash,
-      int downloaded,
-      int uploaded,
-      int left,
-      Boolean acceptsCompactResponse,
-      Event event,
-      String ip,
-      Integer port,
-      String key,
-      Integer numWant,
-      byte[] trackerId,
-      Boolean omitPeerId
-  ) {
+  public TrackerRequestImpl(Peer peer, byte[] infoHash, int downloaded,
+      int uploaded, int left, Boolean acceptsCompactResponse, Event event,
+      String ip, Integer port, String key, Integer numWant, byte[] trackerId,
+      Boolean omitPeerId) {
     this.peer = Preconditions.checkNotNull(peer);
     this.infoHash = Preconditions.checkNotNull(infoHash);
     this.downloaded = Preconditions.checkNotNull(downloaded);
     this.uploaded = Preconditions.checkNotNull(uploaded);
     this.left = Preconditions.checkNotNull(left);
-    this.acceptsCompactResponse = acceptsCompactResponse == null ? false : acceptsCompactResponse;
+    this.acceptsCompactResponse = acceptsCompactResponse == null ? false
+        : acceptsCompactResponse;
     this.event = event;
     this.ip = ip;
     this.port = port;

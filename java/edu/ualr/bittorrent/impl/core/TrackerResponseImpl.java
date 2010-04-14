@@ -16,24 +16,14 @@ public class TrackerResponseImpl implements TrackerResponse {
   final String failureReason;
   final String warningMessage;
 
-  public TrackerResponseImpl(
-      byte[] trackerId,
-      ImmutableList<Peer> peers,
-      int complete,
-      int incomplete,
-      int interval) {
+  public TrackerResponseImpl(byte[] trackerId, ImmutableList<Peer> peers,
+      int complete, int incomplete, int interval) {
     this(trackerId, peers, complete, incomplete, interval, null, null, null);
   }
 
-  public TrackerResponseImpl(
-      byte[] trackerId,
-      ImmutableList<Peer> peers,
-      int complete,
-      int incomplete,
-      int interval,
-      Integer minInterval,
-      String failureReason,
-      String warningMessage) {
+  public TrackerResponseImpl(byte[] trackerId, ImmutableList<Peer> peers,
+      int complete, int incomplete, int interval, Integer minInterval,
+      String failureReason, String warningMessage) {
     this.trackerId = Preconditions.checkNotNull(trackerId);
     this.peers = Preconditions.checkNotNull(peers);
     this.complete = Preconditions.checkNotNull(complete);

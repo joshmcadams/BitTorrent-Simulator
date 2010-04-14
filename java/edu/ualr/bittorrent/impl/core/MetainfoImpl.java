@@ -20,19 +20,23 @@ public class MetainfoImpl implements Metainfo {
   final Integer pieceLength;
   final byte[] infoHash;
 
-  public MetainfoImpl(ImmutableList<Tracker> trackers, ImmutableList<String> pieces,
-      Integer pieceLength, ImmutableList<File> files) throws NoSuchAlgorithmException {
+  public MetainfoImpl(ImmutableList<Tracker> trackers,
+      ImmutableList<String> pieces, Integer pieceLength,
+      ImmutableList<File> files) throws NoSuchAlgorithmException {
     this.trackers = Preconditions.checkNotNull(trackers);
     this.pieces = Preconditions.checkNotNull(pieces);
     this.pieceLength = Preconditions.checkNotNull(pieceLength);
     this.files = Preconditions.checkNotNull(files);
 
-    Preconditions.checkArgument(trackers.size() > 0, "At least one tracker is required");
-    Preconditions.checkArgument(pieces.size() > 0, "At least one piece is required");
-    Preconditions.checkArgument(files.size() > 0, "At least one file is required");
+    Preconditions.checkArgument(trackers.size() > 0,
+        "At least one tracker is required");
+    Preconditions.checkArgument(pieces.size() > 0,
+        "At least one piece is required");
+    Preconditions.checkArgument(files.size() > 0,
+        "At least one file is required");
 
-    this.infoHash =
-      MessageDigest.getInstance("SHA").digest(UUID.randomUUID().toString().getBytes());
+    this.infoHash = MessageDigest.getInstance("SHA").digest(
+        UUID.randomUUID().toString().getBytes());
   }
 
   @Override
@@ -41,11 +45,11 @@ public class MetainfoImpl implements Metainfo {
       return false;
     }
     MetainfoImpl metainfo = (MetainfoImpl) object;
-    return Objects.equal(trackers, metainfo.trackers) &&
-           Objects.equal(infoHash, metainfo.infoHash) &&
-           Objects.equal(pieces, metainfo.pieces) &&
-           Objects.equal(pieceLength, metainfo.pieceLength) &&
-           Objects.equal(files, metainfo.files);
+    return Objects.equal(trackers, metainfo.trackers)
+        && Objects.equal(infoHash, metainfo.infoHash)
+        && Objects.equal(pieces, metainfo.pieces)
+        && Objects.equal(pieceLength, metainfo.pieceLength)
+        && Objects.equal(files, metainfo.files);
   }
 
   @Override
@@ -118,7 +122,8 @@ public class MetainfoImpl implements Metainfo {
     public FileImpl(Long length, ImmutableList<String> name) {
       this.length = Preconditions.checkNotNull(length);
       this.name = Preconditions.checkNotNull(name);
-      Preconditions.checkArgument(name.size() > 0, "At least one name component is required");
+      Preconditions.checkArgument(name.size() > 0,
+          "At least one name component is required");
     }
 
     public Long getLength() {
