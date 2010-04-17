@@ -18,6 +18,9 @@ import edu.ualr.bittorrent.interfaces.Tracker;
 import edu.ualr.bittorrent.interfaces.TrackerRequest;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
 
+/**
+ * Default implementation of the {@link Tracker} interface.
+ */
 public class TrackerImpl implements Tracker {
   private static final Logger logger = Logger.getLogger(TrackerImpl.class);
   private static final int PEER_REQUEST_LIMIT = 50;
@@ -27,15 +30,29 @@ public class TrackerImpl implements Tracker {
   private final int interval;
   private final Map<byte[], SwarmInfo> swarmInfoMap = new ConcurrentHashMap<byte[], SwarmInfo>();
 
+  /**
+   * Create a new tracker.
+   *
+   * @param interval
+   */
   public TrackerImpl(int interval) {
     this(UUID.randomUUID().toString().getBytes(), interval);
   }
 
+  /**
+   * Create a new tracker.
+   *
+   * @param id
+   * @param interval
+   */
   public TrackerImpl(byte[] id, int interval) {
     this.id = Preconditions.checkNotNull(id);
     this.interval = interval;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public TrackerResponse get(TrackerRequest request) {
     Preconditions.checkNotNull(request);
     Peer peer = request.getPeer();
@@ -44,6 +61,9 @@ public class TrackerImpl implements Tracker {
     return buildResponse(request);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   private TrackerResponse buildResponse(TrackerRequest request) {
     SwarmInfo swarmInfo = getSwarmInfo(request.getInfoHash());
     swarmInfo.logRequest(request);
@@ -53,6 +73,9 @@ public class TrackerImpl implements Tracker {
     return response;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   private SwarmInfo getSwarmInfo(byte[] infoHash) {
     if (swarmInfoMap.containsKey(infoHash)) {
       return swarmInfoMap.get(infoHash);
@@ -64,6 +87,10 @@ public class TrackerImpl implements Tracker {
     return swarmInfo;
   }
 
+  /**
+   * No thread needed for this implementation of the tracker, so the run method
+   * does no work.
+   */
   public void run() {
     /*
      * Default tracker doesn't do anything in its thread and instead relies on
@@ -72,10 +99,18 @@ public class TrackerImpl implements Tracker {
      */
   }
 
+  /**
+   * Object to keep the state of the swarm.
+   */
   private class SwarmInfo {
     private final Map<Peer, Instant> leeches = new ConcurrentHashMap<Peer, Instant>();
     private final Map<Peer, Instant> seeders = new ConcurrentHashMap<Peer, Instant>();
 
+    /**
+     * Know when a request has been made.
+     *
+     * @param request
+     */
     void logRequest(TrackerRequest request) {
       if (request.getLeft() == 0) {
         leeches.remove(request.getPeer());
@@ -86,6 +121,12 @@ public class TrackerImpl implements Tracker {
       }
     }
 
+    /**
+     * Get a list of peers to return to the requestor.
+     *
+     * @param request
+     * @return
+     */
     List<Peer> getListOfPeers(TrackerRequest request) {
       final int listSize = request.getNumWant() != null
           && PEER_REQUEST_LIMIT > request.getNumWant() ? request.getNumWant()
@@ -127,10 +168,20 @@ public class TrackerImpl implements Tracker {
       return ImmutableList.copyOf(peerMap.keySet());
     }
 
+    /**
+     * Get the number of seeders in the swarm.
+     *
+     * @return
+     */
     int getSeederCount() {
       return seeders.size();
     }
 
+    /**
+     * Get the number of leechers in the swarm.
+     *
+     * @return
+     */
     int getLeechCount() {
       return leeches.size();
     }

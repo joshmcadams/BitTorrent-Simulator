@@ -29,8 +29,6 @@ import edu.ualr.bittorrent.interfaces.Tracker;
  * components of a swarm together. This includes the {@link PeerProvider} that
  * provides the peers to the simulated swarm and the {@link Metainfo} that the
  * swarm is using to calculate its downloads.
- *
- * @author jmcadams
  */
 public class Simulator {
   private final PeerProvider peerProvider;

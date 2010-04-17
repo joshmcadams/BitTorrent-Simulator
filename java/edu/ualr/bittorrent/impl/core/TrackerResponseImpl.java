@@ -6,6 +6,9 @@ import com.google.common.collect.ImmutableList;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
 
+/**
+ * Default implementation of the {@link TrackerResponse} interface.
+ */
 public class TrackerResponseImpl implements TrackerResponse {
   final byte[] trackerId;
   final ImmutableList<Peer> peers;
@@ -16,11 +19,32 @@ public class TrackerResponseImpl implements TrackerResponse {
   final String failureReason;
   final String warningMessage;
 
+  /**
+   * Create a new tracker response.
+   *
+   * @param trackerId
+   * @param peers
+   * @param complete
+   * @param incomplete
+   * @param interval
+   */
   public TrackerResponseImpl(byte[] trackerId, ImmutableList<Peer> peers,
       int complete, int incomplete, int interval) {
     this(trackerId, peers, complete, incomplete, interval, null, null, null);
   }
 
+  /**
+   * Create a new tracker response.
+   *
+   * @param trackerId
+   * @param peers
+   * @param complete
+   * @param incomplete
+   * @param interval
+   * @param minInterval
+   * @param failureReason
+   * @param warningMessage
+   */
   public TrackerResponseImpl(byte[] trackerId, ImmutableList<Peer> peers,
       int complete, int incomplete, int interval, Integer minInterval,
       String failureReason, String warningMessage) {
@@ -34,34 +58,58 @@ public class TrackerResponseImpl implements TrackerResponse {
     this.warningMessage = warningMessage;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public ImmutableList<Peer> getPeers() {
     return peers;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public int getComplete() {
     return complete;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public String getFailureReason() {
     return failureReason;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public int getIncomplete() {
     return incomplete;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public int getInterval() {
     return interval;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Integer getMinInterval() {
     return minInterval;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public byte[] getTrackerId() {
     return trackerId;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public String getWarningMessage() {
     return warningMessage;
   }

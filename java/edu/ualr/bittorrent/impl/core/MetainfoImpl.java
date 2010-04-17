@@ -13,6 +13,9 @@ import com.google.common.collect.ImmutableList;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Tracker;
 
+/**
+ * Default implementation of the {@link Metainfo} interface.
+ */
 public class MetainfoImpl implements Metainfo {
   final ImmutableList<Tracker> trackers;
   final ImmutableList<String> pieces;
@@ -20,6 +23,19 @@ public class MetainfoImpl implements Metainfo {
   final Integer pieceLength;
   final byte[] infoHash;
 
+  /**
+   * Create a new metainfo object, generating a new unique info hash.
+   *
+   * @param trackers
+   *          list of trackers that manage the swarm
+   * @param pieces
+   *          signatures of data chunks in the torrent
+   * @param pieceLength
+   *          length of data that constitutes a piece
+   * @param files
+   *          list of files in the torrent
+   * @throws NoSuchAlgorithmException
+   */
   public MetainfoImpl(ImmutableList<Tracker> trackers,
       ImmutableList<String> pieces, Integer pieceLength,
       ImmutableList<File> files) throws NoSuchAlgorithmException {
@@ -57,30 +73,51 @@ public class MetainfoImpl implements Metainfo {
     return Objects.hashCode(infoHash, trackers, pieceLength, pieces, files);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public String getComment() {
     return null; /* optional field that we are opting out of providing */
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public String getCreatedBy() {
     return null; /* optional field that we are opting out of providing */
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Instant getCreationDate() {
     return null; /* optional field that we are opting out of providing */
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public String getEncoding() {
     return null; /* optional field that we are opting out of providing */
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public byte[] getInfoHash() {
     return infoHash;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public ImmutableList<File> getFiles() {
     return files;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Long getLength() {
     if (files.size() > 1) {
       return null;
@@ -88,10 +125,16 @@ public class MetainfoImpl implements Metainfo {
     return files.get(0).getLength();
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public String getMd5Sum() {
     return null; /* optional field that we are opting out of providing */
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public ImmutableList<String> getName() {
     if (files.size() > 1) {
       return null;
@@ -99,26 +142,49 @@ public class MetainfoImpl implements Metainfo {
     return files.get(0).getName();
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Integer getPieceLength() {
     return pieceLength;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public ImmutableList<String> getPieces() {
     return pieces;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Integer getPrivate() {
     return null; /* optional field that we are opting out of providing */
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public ImmutableList<Tracker> getTrackers() {
     return trackers;
   }
 
+  /**
+   * Default implementation of the {@link Metainfo.File} interface.
+   */
   public static class FileImpl implements Metainfo.File {
     final Long length;
     final ImmutableList<String> name;
 
+    /**
+     * Creates a new file object.
+     *
+     * @param length
+     *          the size of the file in bytes
+     * @param name
+     *          the name of the file, including path, as a list of strings
+     */
     public FileImpl(Long length, ImmutableList<String> name) {
       this.length = Preconditions.checkNotNull(length);
       this.name = Preconditions.checkNotNull(name);
@@ -126,14 +192,23 @@ public class MetainfoImpl implements Metainfo {
           "At least one name component is required");
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Long getLength() {
       return length;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public String getMd5Sum() {
       return null; /* optional field that we are opting out of providing */
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public ImmutableList<String> getName() {
       return name;
     }

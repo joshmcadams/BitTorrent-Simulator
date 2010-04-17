@@ -32,6 +32,10 @@ import edu.ualr.bittorrent.interfaces.PeerState.InterestLevel;
 import edu.ualr.bittorrent.interfaces.PeerState.PieceDeclaration;
 import edu.ualr.bittorrent.interfaces.PeerState.PieceRequest;
 
+/**
+ * Default implementation of the decision making portion of a peer, the
+ * {@link PeerBrains}.
+ */
 public class PeerBrainsImpl implements PeerBrains {
   private Map<Peer, PeerState> activePeers;
   private Peer localPeer;
@@ -40,22 +44,37 @@ public class PeerBrainsImpl implements PeerBrains {
   private static final Logger logger = Logger.getLogger(PeerBrainsImpl.class);
   private static final Integer UNCHOKED_PEER_LIMIT = 100;
 
+  /**
+   * {@inheritDoc}
+   */
   public void setLocalPeer(Peer local) {
     this.localPeer = Preconditions.checkNotNull(local);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setActivePeers(Map<Peer, PeerState> activePeers) {
     this.activePeers = Preconditions.checkNotNull(activePeers);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setMetainfo(Metainfo metainfo) {
     this.metainfo = Preconditions.checkNotNull(metainfo);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setData(Map<Integer, byte[]> data) {
     this.data = Preconditions.checkNotNull(data);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public List<Pair<Peer, Message>> getMessagesToDispatch() {
     Preconditions.checkNotNull(localPeer);
     Preconditions.checkNotNull(activePeers);
@@ -134,6 +153,15 @@ public class PeerBrainsImpl implements PeerBrains {
     return messages;
   }
 
+  /**
+   * Determine if a handshake message should be sent and if so, add it to the
+   * message queue.
+   *
+   * @param remotePeer
+   * @param state
+   * @param messages
+   * @return
+   */
   private boolean sendHandshake(Peer remotePeer, PeerState state,
       List<Pair<Peer, Message>> messages) {
     Instant localSentHandshakeAt = null;
@@ -153,6 +181,15 @@ public class PeerBrainsImpl implements PeerBrains {
     return false;
   }
 
+  /**
+   * Determine if the remote has sent a handshake, if not, trying sending
+   * another to the remote.
+   *
+   * @param remotePeer
+   * @param state
+   * @param messages
+   * @return
+   */
   private boolean remoteHasSentHandshake(Peer remotePeer, PeerState state,
       List<Pair<Peer, Message>> messages) {
     Instant remoteSentHandshakeAt = null;
@@ -178,6 +215,14 @@ public class PeerBrainsImpl implements PeerBrains {
     return true;
   }
 
+  /**
+   * Initially the remote should be choked according to the specification.
+   *
+   * @param remotePeer
+   * @param state
+   * @param messages
+   * @return
+   */
   private boolean sendInitialChoke(Peer remotePeer, PeerState state,
       List<Pair<Peer, Message>> messages) {
     Pair<ChokeStatus, Instant> choked = null;
@@ -199,6 +244,14 @@ public class PeerBrainsImpl implements PeerBrains {
     return false;
   }
 
+  /**
+   * As the local peer collects pieces, it should let its neighbors know.
+   *
+   * @param remotePeer
+   * @param state
+   * @param messages
+   * @return
+   */
   private boolean letPeerKnowAboutNewPieces(Peer remotePeer, PeerState state,
       List<Pair<Peer, Message>> messages) {
 
@@ -241,6 +294,16 @@ public class PeerBrainsImpl implements PeerBrains {
     return pieceDeclared;
   }
 
+  /**
+   * If a neighbor has a piece that we are interested in and if we are choked,
+   * then we should let the neighbor know that we'd like to request a piece of
+   * data from it, hoping that we will soon be unchoked.
+   *
+   * @param remotePeer
+   * @param state
+   * @param messages
+   * @return
+   */
   private boolean expressInterest(Peer remotePeer, PeerState state,
       List<Pair<Peer, Message>> messages) {
 
@@ -279,6 +342,14 @@ public class PeerBrainsImpl implements PeerBrains {
     return false;
   }
 
+  /**
+   * Unchoke peers that are interested.
+   *
+   * @param remotePeer
+   * @param state
+   * @param messages
+   * @return
+   */
   private boolean unchoke(Peer remotePeer, PeerState state,
       List<Pair<Peer, Message>> messages) {
 
@@ -325,6 +396,14 @@ public class PeerBrainsImpl implements PeerBrains {
     return true;
   }
 
+  /**
+   * Make data requests to peers.
+   *
+   * @param remotePeer
+   * @param state
+   * @param messages
+   * @return
+   */
   private boolean makeRequests(Peer remotePeer, PeerState state,
       List<Pair<Peer, Message>> messages) {
 
@@ -391,6 +470,14 @@ public class PeerBrainsImpl implements PeerBrains {
     return false;
   }
 
+  /**
+   * Send pieces to peers.
+   *
+   * @param remotePeer
+   * @param state
+   * @param messages
+   * @return
+   */
   private boolean sendPieces(Peer remotePeer, PeerState state,
       List<Pair<Peer, Message>> messages) {
 
@@ -458,6 +545,14 @@ public class PeerBrainsImpl implements PeerBrains {
     return true;
   }
 
+  /**
+   * Cancel any requests that have been made, but fulfilled by other peers.
+   *
+   * @param remotePeer
+   * @param state
+   * @param messages
+   * @return
+   */
   private boolean cancelPieceRequests(Peer remotePeer, PeerState state,
       List<Pair<Peer, Message>> messages) {
 
@@ -483,6 +578,14 @@ public class PeerBrainsImpl implements PeerBrains {
     return true;
   }
 
+  /**
+   * Let the peer know we are here.
+   *
+   * @param remotePeer
+   * @param state
+   * @param messages
+   * @return
+   */
   private boolean sendKeepAlive(Peer remotePeer, PeerState state,
       List<Pair<Peer, Message>> messages) {
     messages.add(new Pair<Peer, Message>(remotePeer, new KeepAliveImpl(

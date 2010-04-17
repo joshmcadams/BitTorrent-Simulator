@@ -13,6 +13,9 @@ import com.sun.tools.javac.util.Pair;
 
 import edu.ualr.bittorrent.interfaces.PeerState;
 
+/**
+ * Default implementation of the {@link PeerState} interface.
+ */
 public class PeerStateImpl implements PeerState {
   Instant lastLocalHandshakeSentAt;
   Instant lastRemoteHandshakeSentAt;
@@ -32,6 +35,9 @@ public class PeerStateImpl implements PeerState {
   List<PieceDeclaration> localDeclaredPieces = Lists.newArrayList();
   private static final Logger logger = Logger.getLogger(PeerStateImpl.class);
 
+  /**
+   * Default implementation of the {@link PieceTransfer} interface.
+   */
   public static class PieceTransferImpl implements PieceTransfer {
     Instant completionTime;
     Integer pieceIndex;
@@ -39,42 +45,72 @@ public class PeerStateImpl implements PeerState {
     Integer blockOffset;
     Integer blockSize;
 
+    /**
+     * {@inheritDoc}
+     */
     public Instant getCompletionTime() {
       return completionTime;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Integer getPieceIndex() {
       return pieceIndex;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Instant getStartTime() {
       return startTime;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void setCompletionTime(Instant time) {
       this.completionTime = Preconditions.checkNotNull(time);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void setPieceIndex(Integer index) {
       this.pieceIndex = Preconditions.checkNotNull(index);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void setStartTime(Instant time) {
       this.startTime = Preconditions.checkNotNull(time);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Integer getBlockOffset() {
       return blockOffset;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Integer getBlockSize() {
       return blockSize;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void setBlockOffset(Integer offset) {
       this.blockOffset = Preconditions.checkNotNull(offset);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void setBlockSize(Integer size) {
       this.blockSize = Preconditions.checkNotNull(size);
     }
@@ -104,6 +140,9 @@ public class PeerStateImpl implements PeerState {
     }
   }
 
+  /**
+   * Default implementation of the {@link PieceUpload} interface.
+   */
   public static class PieceUploadImpl extends PieceTransferImpl implements
       PieceUpload {
     @Override
@@ -113,14 +152,23 @@ public class PeerStateImpl implements PeerState {
     }
   }
 
+  /**
+   * Default implementation of the {@link PieceDownload} interface.
+   */
   public static class PieceDownloadImpl extends PieceTransferImpl implements
       PieceDownload {
     boolean valid;
 
+    /**
+     * {@inheritDoc}
+     */
     public void setValidPiece(boolean valid) {
       this.valid = Preconditions.checkNotNull(valid);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public boolean wasValidPiece() {
       return valid;
     }
@@ -132,40 +180,67 @@ public class PeerStateImpl implements PeerState {
     }
   }
 
+  /**
+   * Default implementation of the {@PieceRequest} interface.
+   */
   public static class PieceRequestImpl implements PieceRequest {
     Integer pieceIndex;
     Instant requestTime;
     Integer blockOffset;
     Integer blockSize;
 
+    /**
+     * {@inheritDoc}
+     */
     public Integer getPieceIndex() {
       return pieceIndex;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Instant getRequestTime() {
       return requestTime;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void setPieceIndex(Integer index) {
       this.pieceIndex = Preconditions.checkNotNull(index);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void setRequestTime(Instant time) {
       this.requestTime = Preconditions.checkNotNull(time);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Integer getBlockOffset() {
       return blockOffset;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Integer getBlockSize() {
       return blockSize;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void setBlockOffset(Integer offset) {
       this.blockOffset = Preconditions.checkNotNull(offset);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void setBlockSize(Integer size) {
       this.blockSize = Preconditions.checkNotNull(size);
     }
@@ -195,22 +270,37 @@ public class PeerStateImpl implements PeerState {
     }
   }
 
+  /**
+   * Default implementation of the {@link PieceDeclaration} interface.
+   */
   public static class PieceDeclarationImpl implements PieceDeclaration {
     Instant declarationTime;
     Integer pieceIndex;
 
+    /**
+     * {@inheritDoc}
+     */
     public Instant getDeclarationTime() {
       return declarationTime;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public Integer getPieceIndex() {
       return pieceIndex;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void setDeclarationTime(Instant time) {
       this.declarationTime = Preconditions.checkNotNull(time);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void setPieceIndex(Integer index) {
       this.pieceIndex = Preconditions.checkNotNull(index);
     }
@@ -233,6 +323,9 @@ public class PeerStateImpl implements PeerState {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void cancelLocalRequestedPiece(PieceRequest request) {
     synchronized (piecesRequestedByLocal) {
       while (piecesRequestedByLocal.remove(Preconditions.checkNotNull(request))) {
@@ -240,6 +333,9 @@ public class PeerStateImpl implements PeerState {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void cancelRemoteRequestedPiece(PieceRequest request) {
     synchronized (piecesRequestedByRemote) {
       while (piecesRequestedByRemote
@@ -248,14 +344,23 @@ public class PeerStateImpl implements PeerState {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Instant whenDidLocalSendHandshake() {
     return this.lastLocalHandshakeSentAt;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Pair<InterestLevel, Instant> getLocalInterestLevelInRemote() {
     return localInterestLevelInRemote;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public ImmutableList<PieceRequest> getLocalRequestedPieces() {
     ImmutableList<PieceRequest> requested = null;
     synchronized (piecesRequestedByLocal) {
@@ -264,74 +369,125 @@ public class PeerStateImpl implements PeerState {
     return requested;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Pair<InterestLevel, Instant> getRemoteInterestLevelInLocal() {
     return remoteInterestLevelInLocal;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public ImmutableList<PieceRequest> getRemoteRequestedPieces() {
     return ImmutableList.copyOf(piecesRequestedByRemote);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Instant getRemoteSentKeepAliveAt() {
     return this.lastRemoteKeepAliveSentAt;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Instant getLocalSentKeepAliveAt() {
     return this.lastLocalKeepAliveSentAt;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Pair<ChokeStatus, Instant> isLocalChoked() {
     return localChokeStatus;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Pair<ChokeStatus, Instant> isRemoteChoked() {
     return remoteChokeStatus;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public ImmutableList<PieceDownload> piecesReceived() {
     return ImmutableList.copyOf(piecesDownloaded);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public ImmutableList<PieceUpload> piecesSent() {
     return ImmutableList.copyOf(piecesUploaded);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public ImmutableList<PieceDeclaration> remoteHasPieces() {
     return ImmutableList.copyOf(remoteDeclaredPieces);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public int getRemotePort() {
     return remotePort;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public int getLocalPort() {
     return localPort;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setLocalInterestLevelInRemote(InterestLevel interest, Instant when) {
     localInterestLevelInRemote = new Pair<InterestLevel, Instant>(Preconditions
         .checkNotNull(interest), Preconditions.checkNotNull(when));
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setLocalIsChoked(ChokeStatus choked, Instant when) {
     localChokeStatus = new Pair<ChokeStatus, Instant>(Preconditions
         .checkNotNull(choked), Preconditions.checkNotNull(when));
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setLocalRequestedPiece(PieceRequest request) {
     synchronized (piecesRequestedByLocal) {
       piecesRequestedByLocal.add(Preconditions.checkNotNull(request));
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setLocalSentHandshakeAt(Instant when) {
     this.lastLocalHandshakeSentAt = Preconditions.checkNotNull(when);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setLocalSentKeepAliveAt(Instant when) {
     this.lastLocalKeepAliveSentAt = Preconditions.checkNotNull(when);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setLocalSentPiece(PieceUpload piece) {
     piecesUploaded.add(Preconditions.checkNotNull(piece));
 
@@ -348,52 +504,88 @@ public class PeerStateImpl implements PeerState {
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setRemoteHasPiece(PieceDeclaration declaration) {
     remoteDeclaredPieces.add(Preconditions.checkNotNull(declaration));
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setRemoteInterestLevelInLocal(InterestLevel interest, Instant when) {
     remoteInterestLevelInLocal = new Pair<InterestLevel, Instant>(Preconditions
         .checkNotNull(interest), Preconditions.checkNotNull(when));
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setRemoteIsChoked(ChokeStatus choked, Instant when) {
     remoteChokeStatus = new Pair<ChokeStatus, Instant>(Preconditions
         .checkNotNull(choked), Preconditions.checkNotNull(when));
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setRemoteRequestedPiece(PieceRequest request) {
     piecesRequestedByRemote.add(Preconditions.checkNotNull(request));
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setRemoteRequestedPort(int port) {
     this.remotePort = Preconditions.checkNotNull(port);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setLocalRequestedPort(int port) {
     this.localPort = Preconditions.checkNotNull(port);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setRemoteSentHandshakeAt(Instant when) {
     this.lastRemoteHandshakeSentAt = Preconditions.checkNotNull(when);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setRemoteSentKeepAliveAt(Instant when) {
     this.lastRemoteKeepAliveSentAt = Preconditions.checkNotNull(when);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setRemoteSentPiece(PieceDownload piece) {
     piecesDownloaded.add(Preconditions.checkNotNull(piece));
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Instant whenDidRemoteSendHandshake() {
     return lastRemoteHandshakeSentAt;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public ImmutableList<PieceDeclaration> localHasPieces() {
     return ImmutableList.copyOf(localDeclaredPieces);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void setLocalHasPiece(PieceDeclaration declaration) {
     localDeclaredPieces.add(Preconditions.checkNotNull(declaration));
   }

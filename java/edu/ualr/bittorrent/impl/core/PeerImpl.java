@@ -45,6 +45,9 @@ import edu.ualr.bittorrent.interfaces.messages.Port;
 import edu.ualr.bittorrent.interfaces.messages.Request;
 import edu.ualr.bittorrent.interfaces.messages.Unchoke;
 
+/**
+ * Default peer implementation.
+ */
 public class PeerImpl implements Peer {
   private Tracker tracker;
   private final byte[] id;
@@ -62,7 +65,7 @@ public class PeerImpl implements Peer {
   /**
    * Create a new PeerImpl object, providing a unique ID, the brains of the
    * peer, and some initial data related to the torrent.
-   * 
+   *
    * @param id
    * @param brains
    * @param initialData
@@ -81,7 +84,7 @@ public class PeerImpl implements Peer {
   /**
    * Create a new PeerImpl object, providing the brains of the peer and some
    * initial data related to the torrent.
-   * 
+   *
    * @param brains
    * @param initialData
    */
@@ -92,7 +95,7 @@ public class PeerImpl implements Peer {
   /**
    * Create a new PeerImpl object, providing some initial data. The default
    * {@link PeerBrainsImpl} will be used to control decision making by the peer.
-   * 
+   *
    * @param initialData
    */
   public PeerImpl(Map<Integer, byte[]> initialData) {
@@ -111,15 +114,9 @@ public class PeerImpl implements Peer {
   /**
    * {@inheritDoc}
    */
-  public void setTracker(Tracker tracker) {
-    this.tracker = Preconditions.checkNotNull(tracker);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
   public void setMetainfo(Metainfo metainfo) {
     this.metainfo = Preconditions.checkNotNull(metainfo);
+    this.tracker = Preconditions.checkNotNull(metainfo.getTrackers().get(0));
   }
 
   /**
@@ -163,7 +160,7 @@ public class PeerImpl implements Peer {
    * {@link ExecutorService}. The peer itself creates a new
    * {@link ExecutorService} that it uses to spawn threads for parallel
    * communication with the tracker and with other peers in the swarm.
-   * 
+   *
    * This thread loops infinitely, pulling messages off of a message queue. The
    * message queue is populated with messages received from other peers in the
    * swarm. The messages are processed in the sense that they are used to
@@ -224,7 +221,7 @@ public class PeerImpl implements Peer {
    * multiple {@link Have} messages. This method parses the {@link BitField} and
    * stores a {@link PieceDeclaration} for each piece that the remote claims to
    * possess.
-   * 
+   *
    * @param bitfield
    */
   private void processBitFieldMessage(BitField bitfield) {
@@ -256,7 +253,7 @@ public class PeerImpl implements Peer {
    * After a remote peer requests a piece, it can later cancel that request by
    * sending a cancel message. This method processes the given cancel message
    * and notes the cancel in the peer state.
-   * 
+   *
    * @param cancel
    */
   private void processCancelMessage(Cancel cancel) {
@@ -279,7 +276,7 @@ public class PeerImpl implements Peer {
   /**
    * When choked by a remote peer, the local client should send any requests.
    * This method notes the choke in shared state.
-   * 
+   *
    * @param choke
    */
   private void processChokeMessage(Choke choke) {
@@ -299,7 +296,7 @@ public class PeerImpl implements Peer {
    * on a specific port. This method takes note of the port request; however,
    * since this simulator doesn't make actual network calls, the port operation
    * does little more than update state.
-   * 
+   *
    * @param port
    */
   private void processPortMessage(Port port) {
@@ -317,7 +314,7 @@ public class PeerImpl implements Peer {
   /**
    * A request message is sent by the remote peer to request a specific piece
    * from the local client. This method takes note of the specific request.
-   * 
+   *
    * @param request
    */
   private void processRequestMessage(Request request) {
@@ -340,7 +337,7 @@ public class PeerImpl implements Peer {
   /**
    * A handshake message is sent between peers to initiate communication. This
    * method notes that the remote peer sent a handshake.
-   * 
+   *
    * @param handshake
    */
   private void processHandshakeMessage(Handshake handshake) {
@@ -358,7 +355,7 @@ public class PeerImpl implements Peer {
   /**
    * As a peer collects pieces, it announces the newly collected pieces to its
    * peers. This method processes a piece announcement from a remote peer.
-   * 
+   *
    * @param have
    */
   private void processHaveMessage(Have have) {
@@ -381,7 +378,7 @@ public class PeerImpl implements Peer {
    * the local client has, it sends an {@link Interested} message to let the
    * local client know that the remote is interested in what the local client
    * has to offer. This method notes that interest.
-   * 
+   *
    * @param interested
    */
   private void processInterestedMessage(Interested interested) {
@@ -402,7 +399,7 @@ public class PeerImpl implements Peer {
    * which they are connected, just to let the peers know that the client is
    * here and communicating... it just might not have had anything interesting
    * to say for a while.
-   * 
+   *
    * @param keepAlive
    */
   private void processKeepAliveMessage(KeepAlive keepAlive) {
@@ -421,7 +418,7 @@ public class PeerImpl implements Peer {
    * offer, it can tell them so using the {@link NotInterested} message. This
    * lets the local client know that there really isn't any reason to unchoke
    * the remote peer.
-   * 
+   *
    * @param notInterested
    */
   private void processNotInterestedMessage(NotInterested notInterested) {
@@ -440,7 +437,7 @@ public class PeerImpl implements Peer {
   /**
    * When a remote peer sends a piece of data to the local client, it does so
    * via a {@link Piece} message. This method collects that piece.
-   * 
+   *
    * @param piece
    */
   private void processPieceMessage(Piece piece) {
@@ -476,7 +473,7 @@ public class PeerImpl implements Peer {
    * A remote peer sends an {@link Unchoke} message to the local client to let
    * the local client know that it is okay to start sending requests for data.
    * This method notes the unchoked state.
-   * 
+   *
    * @param unchoke
    */
   private void processUnchokeMessage(Unchoke unchoke) {
@@ -495,7 +492,7 @@ public class PeerImpl implements Peer {
    * Messages are received as somewhat generic {@link PeerMessage} objects. This
    * method determines the type of {@link PeerMessage} and dispatches the
    * message to the appropriate handler.
-   * 
+   *
    * @param message
    */
   private void processMessage(Message message) {
@@ -544,7 +541,7 @@ public class PeerImpl implements Peer {
     /**
      * Creates a new {@link TrackerTalker} that can be used to keep
      * communication flowing between the given client and a {@link Tracker}.
-     * 
+     *
      * @param parent
      * @param infoHash
      */
@@ -587,10 +584,18 @@ public class PeerImpl implements Peer {
   private class PeerTalkerManager implements Runnable {
     private final Peer local;
 
+    /**
+     * Create a new talker manager object.
+     *
+     * @param local
+     */
     PeerTalkerManager(Peer local) {
       this.local = Preconditions.checkNotNull(local);
     }
 
+    /**
+     * As new peers are discovered, set up a communication channel with them.
+     */
     public void run() {
       logger.info("Peer talker manager started");
 
@@ -623,6 +628,12 @@ public class PeerImpl implements Peer {
     }
   }
 
+  /**
+   * Dispatch a message to a peer.
+   *
+   * @param remotePeer
+   * @param message
+   */
   private void sendMessage(Peer remotePeer, Message message) {
     if (message instanceof BitField) {
       sendBitFieldMessage(remotePeer, (BitField) message);
@@ -657,6 +668,12 @@ public class PeerImpl implements Peer {
     }
   }
 
+  /**
+   * Package and send a bitfield message.
+   *
+   * @param remotePeer
+   * @param bitfield
+   */
   private void sendBitFieldMessage(Peer remotePeer, BitField bitfield) {
     logger.info(String.format(
         "Local peer %s sending bitfield message to peer %s",
@@ -684,6 +701,12 @@ public class PeerImpl implements Peer {
     remotePeer.message(bitfield);
   }
 
+  /**
+   * Package and send a cancel message.
+   *
+   * @param remotePeer
+   * @param cancel
+   */
   private void sendCancelMessage(Peer remotePeer, Cancel cancel) {
     logger.info(String.format(
         "Local peer %s sending cancel message to peer %s", new String(getId()),
@@ -702,6 +725,12 @@ public class PeerImpl implements Peer {
     remotePeer.message(cancel);
   }
 
+  /**
+   * Package and send a choke message.
+   *
+   * @param remotePeer
+   * @param choke
+   */
   private void sendChokeMessage(Peer remotePeer, Choke choke) {
     logger.info(String.format("Local peer %s sending choke message to peer %s",
         new String(getId()), new String(remotePeer.getId())));
@@ -714,6 +743,12 @@ public class PeerImpl implements Peer {
     remotePeer.message(choke);
   }
 
+  /**
+   * Package and send a handshake message.
+   *
+   * @param remotePeer
+   * @param handshake
+   */
   private void sendHandshakeMessage(Peer remotePeer, Handshake handshake) {
     logger.info(String.format(
         "Local peer %s sending handshake message to peer %s", new String(
@@ -727,6 +762,12 @@ public class PeerImpl implements Peer {
     remotePeer.message(handshake);
   }
 
+  /**
+   * Package and send a have message.
+   *
+   * @param remotePeer
+   * @param have
+   */
   private void sendHaveMessage(Peer remotePeer, Have have) {
     logger.info(String.format(
         "Local peer %s sending handshake message to peer %s", new String(
@@ -745,6 +786,12 @@ public class PeerImpl implements Peer {
     remotePeer.message(have);
   }
 
+  /**
+   * Package and send an interested message.
+   *
+   * @param remotePeer
+   * @param interested
+   */
   private void sendInterestedMessage(Peer remotePeer, Interested interested) {
     logger.info(String.format(
         "Local peer %s sending interested message to peer %s", new String(
@@ -759,6 +806,12 @@ public class PeerImpl implements Peer {
     remotePeer.message(interested);
   }
 
+  /**
+   * Package and send a keepalive message.
+   *
+   * @param remotePeer
+   * @param keepAlive
+   */
   private void sendKeepAliveMessage(Peer remotePeer, KeepAlive keepAlive) {
     logger.info(String.format(
         "Local peer %s sending keep-alive message to peer %s", new String(
@@ -772,6 +825,12 @@ public class PeerImpl implements Peer {
     remotePeer.message(keepAlive);
   }
 
+  /**
+   * Package and sent a not-interested message.
+   *
+   * @param remotePeer
+   * @param notInterested
+   */
   private void sendNotInterestedMessage(Peer remotePeer,
       NotInterested notInterested) {
     logger.info(String.format(
@@ -787,6 +846,12 @@ public class PeerImpl implements Peer {
     remotePeer.message(notInterested);
   }
 
+  /**
+   * Package and send a piece message.
+   *
+   * @param remotePeer
+   * @param piece
+   */
   private void sendPieceMessage(Peer remotePeer, Piece piece) {
     logger.info(String.format("Local peer %s sending piece message to peer %s",
         new String(getId()), new String(remotePeer.getId())));
@@ -806,6 +871,12 @@ public class PeerImpl implements Peer {
     remotePeer.message(piece);
   }
 
+  /**
+   * Package and send a port message.
+   *
+   * @param remotePeer
+   * @param port
+   */
   private void sendPortMessage(Peer remotePeer, Port port) {
     logger.info(String.format("Local peer %s sending port message to peer %s",
         new String(getId()), new String(remotePeer.getId())));
@@ -818,6 +889,12 @@ public class PeerImpl implements Peer {
     remotePeer.message(port);
   }
 
+  /**
+   * Package and send a request message.
+   *
+   * @param remotePeer
+   * @param request
+   */
   private void sendRequestMessage(Peer remotePeer, Request request) {
     logger.info(String.format(
         "Local peer %s sending request message to peer %s",
@@ -837,6 +914,12 @@ public class PeerImpl implements Peer {
     remotePeer.message(request);
   }
 
+  /**
+   * Package and send an unchoke message.
+   *
+   * @param remotePeer
+   * @param unchoke
+   */
   private void sendUnchokeMessage(Peer remotePeer, Unchoke unchoke) {
     logger.info(String.format(
         "Local peer %s sending unchoke message to peer %s",
@@ -851,6 +934,12 @@ public class PeerImpl implements Peer {
     remotePeer.message(unchoke);
   }
 
+  /**
+   * Package and send a state message.
+   *
+   * @param peer
+   * @return
+   */
   private PeerState getStateForPeer(Peer peer) {
     PeerState state = null;
     synchronized (activePeers) {
