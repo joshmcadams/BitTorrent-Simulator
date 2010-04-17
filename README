@@ -8,6 +8,7 @@ DEPENDENCIES
  - Apache log4j [http://logging.apache.org/log4j/index.html]
  - Apache Ant [http://ant.apache.org/]
  - Joda-Time [http://joda-time.sourceforge.net/]
+ - Google Guice [http://code.google.com/p/google-guice]
 
 LICENSE AND COPYRIGHT
 
