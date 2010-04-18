@@ -14,10 +14,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.inject.Guice;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
 
 import edu.ualr.bittorrent.impl.core.MetainfoImpl;
 import edu.ualr.bittorrent.impl.core.PeerProviderImpl;
-import edu.ualr.bittorrent.impl.core.TrackerImpl;
+import edu.ualr.bittorrent.impl.core.TrackerModule;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.PeerProvider;
@@ -37,6 +40,12 @@ public class Simulator {
 
   private final static Logger logger = Logger.getLogger(Simulator.class);
 
+  private void debug (Object... objects) {
+    String formatString = (String) objects[0];
+    System.arraycopy(objects, 1, objects, 0, objects.length-1);
+    logger.debug(String.format(formatString, objects));
+  }
+
   /**
    * Create a new {@link Simulator}.
    *
@@ -48,6 +57,7 @@ public class Simulator {
    * @param threadCount
    *          number of threads that the experiment should use to execute.
    */
+  @Inject
   public Simulator(PeerProvider peerProvider, Metainfo metainfo,
       Integer threadCount) {
     this.peerProvider = Preconditions.checkNotNull(peerProvider);
@@ -79,11 +89,10 @@ public class Simulator {
      */
     public void run() {
       try {
-        logger.info(String.format("Experiment limited to %d microseconds",
-            millisecondsToRun));
+        debug("Experiment limited to %d milliseconds", millisecondsToRun);
         executor.awaitTermination(millisecondsToRun, TimeUnit.MILLISECONDS);
         if (!executor.isShutdown()) {
-          logger.info("Stopping experiment before all threads are complete");
+          debug("Stopping experiment before all threads are complete");
           executor.shutdown();
         }
       } catch (InterruptedException e) {
@@ -98,7 +107,7 @@ public class Simulator {
    * @param millisecondsToRun
    */
   public void runExperiment(Long millisecondsToRun) {
-    logger.info("Experiment starting");
+    debug("Experiment starting");
 
     setTimeout(millisecondsToRun);
 
@@ -144,17 +153,16 @@ public class Simulator {
   private void spawnPeers() {
     ImmutableList<Peer> newPeers;
     while ((newPeers = peerProvider.addPeers()) != null) {
-      logger.info(String.format("Provided with %d new peers", newPeers.size()));
+      debug("Provided with %d new peers", newPeers.size());
       synchronized (peers) {
         peers.addAll(newPeers);
       }
       for (Peer peer : newPeers) {
         if (executor.isShutdown()) {
-          logger.info("Executor is shutdown");
+          debug("Executor is shutdown");
           return;
         }
-        logger.info(String.format("Requesting execution of peer %s",
-            new String(peer.getId())));
+        debug("Requesting execution of peer %s", new String(peer.getId()));
         executor.execute(peer);
       }
     }
@@ -167,8 +175,10 @@ public class Simulator {
    * @throws NoSuchAlgorithmException
    */
   public static void main(String[] args) throws NoSuchAlgorithmException {
-    final Integer trackerRequestInterval = 5000;
-    Tracker tracker = new TrackerImpl(trackerRequestInterval);
+    Injector injector = Guice.createInjector(new TrackerModule());
+
+    Tracker tracker = injector.getInstance(Tracker.class);
+
     ImmutableList<Tracker> trackers = ImmutableList.of(tracker);
 
     final Integer pieceLength = 1000;

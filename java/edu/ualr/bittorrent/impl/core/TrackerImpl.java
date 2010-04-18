@@ -12,7 +12,9 @@ import org.joda.time.Instant;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 
+import edu.ualr.bittorrent.impl.core.TrackerModule.TrackerRequestInterval;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.Tracker;
 import edu.ualr.bittorrent.interfaces.TrackerRequest;
@@ -35,7 +37,8 @@ public class TrackerImpl implements Tracker {
    *
    * @param interval
    */
-  public TrackerImpl(int interval) {
+  @Inject
+  public TrackerImpl(@TrackerRequestInterval int interval) {
     this(UUID.randomUUID().toString().getBytes(), interval);
   }
 
