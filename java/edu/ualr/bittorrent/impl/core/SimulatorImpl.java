@@ -1,4 +1,4 @@
-package edu.ualr.bittorrent;
+package edu.ualr.bittorrent.impl.core;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -17,6 +17,7 @@ import edu.ualr.bittorrent.impl.core.ExperimentModule.ThreadCount;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.PeerProvider;
+import edu.ualr.bittorrent.interfaces.Simulator;
 import edu.ualr.bittorrent.interfaces.Tracker;
 
 /**

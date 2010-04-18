@@ -16,10 +16,9 @@ import com.google.inject.AbstractModule;
 import com.google.inject.BindingAnnotation;
 import com.google.inject.TypeLiteral;
 
-import edu.ualr.bittorrent.Simulator;
-import edu.ualr.bittorrent.SimulatorImpl;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.PeerProvider;
+import edu.ualr.bittorrent.interfaces.Simulator;
 import edu.ualr.bittorrent.interfaces.Tracker;
 
 public class ExperimentModule extends AbstractModule {

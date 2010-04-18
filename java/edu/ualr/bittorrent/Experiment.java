@@ -1,4 +1,4 @@
-package edu.ualr.bittorrent.impl.core;
+package edu.ualr.bittorrent;
 
 import java.security.NoSuchAlgorithmException;
 
@@ -6,7 +6,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 
-import edu.ualr.bittorrent.SimulatorImpl;
+import edu.ualr.bittorrent.impl.core.ExperimentModule;
+import edu.ualr.bittorrent.impl.core.SimulatorImpl;
 import edu.ualr.bittorrent.impl.core.ExperimentModule.ExperimentTimeout;
 
 public class Experiment {
