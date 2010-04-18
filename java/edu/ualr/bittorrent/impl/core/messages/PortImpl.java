@@ -1,5 +1,8 @@
 package edu.ualr.bittorrent.impl.core.messages;
 
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
+
 import edu.ualr.bittorrent.PeerMessage;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.messages.Port;
@@ -16,7 +19,8 @@ public class PortImpl extends PeerMessage<Port> implements Port {
    * @param peer
    * @param port
    */
-  public PortImpl(Peer peer, int port) {
+  @Inject
+  public PortImpl(@Assisted Peer peer, @Assisted int port) {
     super(peer, PeerMessage.Type.PORT);
     this.port = port;
   }

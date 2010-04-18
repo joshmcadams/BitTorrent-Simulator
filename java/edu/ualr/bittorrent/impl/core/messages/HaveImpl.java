@@ -1,5 +1,8 @@
 package edu.ualr.bittorrent.impl.core.messages;
 
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
+
 import edu.ualr.bittorrent.PeerMessage;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.messages.Have;
@@ -16,7 +19,8 @@ public class HaveImpl extends PeerMessage<Have> implements Have {
    * @param peer
    * @param pieceIndex
    */
-  public HaveImpl(Peer peer, int pieceIndex) {
+  @Inject
+  public HaveImpl(@Assisted Peer peer, @Assisted int pieceIndex) {
     super(peer, PeerMessage.Type.HAVE);
     this.pieceIndex = pieceIndex;
   }

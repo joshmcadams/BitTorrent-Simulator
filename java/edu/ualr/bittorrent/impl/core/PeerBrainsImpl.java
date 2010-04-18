@@ -10,14 +10,16 @@ import org.joda.time.Instant;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.sun.tools.javac.util.Pair;
 
 import edu.ualr.bittorrent.impl.core.messages.CancelImpl;
-import edu.ualr.bittorrent.impl.core.messages.ChokeImpl;
 import edu.ualr.bittorrent.impl.core.messages.HandshakeImpl;
 import edu.ualr.bittorrent.impl.core.messages.HaveImpl;
 import edu.ualr.bittorrent.impl.core.messages.InterestedImpl;
 import edu.ualr.bittorrent.impl.core.messages.KeepAliveImpl;
+import edu.ualr.bittorrent.impl.core.messages.MessagesModule;
 import edu.ualr.bittorrent.impl.core.messages.NotInterestedImpl;
 import edu.ualr.bittorrent.impl.core.messages.PieceImpl;
 import edu.ualr.bittorrent.impl.core.messages.RequestImpl;
@@ -31,6 +33,7 @@ import edu.ualr.bittorrent.interfaces.PeerState.ChokeStatus;
 import edu.ualr.bittorrent.interfaces.PeerState.InterestLevel;
 import edu.ualr.bittorrent.interfaces.PeerState.PieceDeclaration;
 import edu.ualr.bittorrent.interfaces.PeerState.PieceRequest;
+import edu.ualr.bittorrent.interfaces.messages.ChokeFactory;
 
 /**
  * Default implementation of the decision making portion of a peer, the
@@ -43,6 +46,11 @@ public class PeerBrainsImpl implements PeerBrains {
   private Map<Integer, byte[]> data;
   private static final Logger logger = Logger.getLogger(PeerBrainsImpl.class);
   private static final Integer UNCHOKED_PEER_LIMIT = 100;
+  private final Injector injector;
+
+  public PeerBrainsImpl() {
+    this.injector = Guice.createInjector(new MessagesModule());
+  }
 
   /**
    * {@inheritDoc}
@@ -174,7 +182,7 @@ public class PeerBrainsImpl implements PeerBrains {
           new String(localPeer.getId()), new String(remotePeer.getId())));
 
       messages.add(new Pair<Peer, Message>(remotePeer, new HandshakeImpl(
-          metainfo.getInfoHash(), localPeer)));
+          localPeer, metainfo.getInfoHash())));
 
       return true;
     }
@@ -208,7 +216,7 @@ public class PeerBrainsImpl implements PeerBrains {
           new String(localPeer.getId()), new String(remotePeer.getId())));
 
       messages.add(new Pair<Peer, Message>(remotePeer, new HandshakeImpl(
-          metainfo.getInfoHash(), localPeer)));
+          localPeer, metainfo.getInfoHash())));
 
       return false;
     }
@@ -236,8 +244,8 @@ public class PeerBrainsImpl implements PeerBrains {
           "Queueing local peer %s to send choke to remote peer %s", new String(
               localPeer.getId()), new String(remotePeer.getId())));
 
-      messages
-          .add(new Pair<Peer, Message>(remotePeer, new ChokeImpl(localPeer)));
+      messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
+          ChokeFactory.class).create(localPeer)));
 
       return true;
     }

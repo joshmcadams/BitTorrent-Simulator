@@ -1,6 +1,8 @@
 package edu.ualr.bittorrent.impl.core.messages;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
 
 import edu.ualr.bittorrent.PeerMessage;
 import edu.ualr.bittorrent.interfaces.Peer;
@@ -26,8 +28,8 @@ public class HandshakeImpl extends PeerMessage<Handshake> implements Handshake {
    * @param infoHash
    * @param peer
    */
-  public HandshakeImpl(byte[] infoHash, Peer peer) {
-    this(infoHash, peer, DEFAULT_PROTOCOL_IDENTIFIER, DEFAULT_RESERVED_BYTES);
+  public HandshakeImpl(Peer peer, byte[] infoHash) {
+    this(peer, infoHash, DEFAULT_PROTOCOL_IDENTIFIER, DEFAULT_RESERVED_BYTES);
   }
 
   /**
@@ -38,8 +40,10 @@ public class HandshakeImpl extends PeerMessage<Handshake> implements Handshake {
    * @param protocolIdentifier
    * @param reservedBytes
    */
-  HandshakeImpl(byte[] infoHash, Peer peer, String protocolIdentifier,
-      byte[] reservedBytes) {
+  @Inject
+  HandshakeImpl(@Assisted Peer peer, @Assisted("infoHash") byte[] infoHash,
+      @Assisted String protocolIdentifier,
+      @Assisted("reservedBytes") byte[] reservedBytes) {
     super(peer, PeerMessage.Type.HANDSHAKE);
     this.infoHash = Preconditions.checkNotNull(infoHash);
     this.protocolIdentifier = Preconditions.checkNotNull(protocolIdentifier);

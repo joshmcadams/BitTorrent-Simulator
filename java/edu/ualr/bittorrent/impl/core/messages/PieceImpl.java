@@ -1,6 +1,8 @@
 package edu.ualr.bittorrent.impl.core.messages;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
 
 import edu.ualr.bittorrent.PeerMessage;
 import edu.ualr.bittorrent.interfaces.Peer;
@@ -22,7 +24,9 @@ public class PieceImpl extends PeerMessage<Piece> implements Piece {
    * @param beginningOffset
    * @param block
    */
-  public PieceImpl(Peer peer, int pieceIndex, int beginningOffset, byte[] block) {
+  @Inject
+  public PieceImpl(@Assisted Peer peer, @Assisted("pieceIndex") int pieceIndex,
+      @Assisted("beginningOffset") int beginningOffset, @Assisted byte[] block) {
     super(peer, PeerMessage.Type.PIECE);
     this.pieceIndex = pieceIndex;
     this.beginningOffset = beginningOffset;

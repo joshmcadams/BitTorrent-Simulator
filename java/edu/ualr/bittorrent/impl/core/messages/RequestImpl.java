@@ -1,5 +1,8 @@
 package edu.ualr.bittorrent.impl.core.messages;
 
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
+
 import edu.ualr.bittorrent.PeerMessage;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.messages.Request;
@@ -20,7 +23,9 @@ public class RequestImpl extends PeerMessage<Request> implements Request {
    * @param begin
    * @param length
    */
-  public RequestImpl(Peer peer, int index, int begin, int length) {
+  @Inject
+  public RequestImpl(@Assisted Peer peer, @Assisted("pieceIndex") int index,
+      @Assisted("beginningOffset") int begin, @Assisted("blockLength") int length) {
     super(peer, PeerMessage.Type.REQUEST);
     this.index = index;
     this.begin = begin;

@@ -1,5 +1,8 @@
 package edu.ualr.bittorrent.impl.core.messages;
 
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
+
 import edu.ualr.bittorrent.PeerMessage;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.messages.Unchoke;
@@ -13,7 +16,8 @@ public class UnchokeImpl extends PeerMessage<Unchoke> implements Unchoke {
    *
    * @param peer
    */
-  public UnchokeImpl(Peer peer) {
+  @Inject
+  public UnchokeImpl(@Assisted Peer peer) {
     super(peer, PeerMessage.Type.UNCHOKE);
   }
 }

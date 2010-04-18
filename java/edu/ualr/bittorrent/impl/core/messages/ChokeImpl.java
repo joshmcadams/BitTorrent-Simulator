@@ -1,5 +1,8 @@
 package edu.ualr.bittorrent.impl.core.messages;
 
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
+
 import edu.ualr.bittorrent.PeerMessage;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.messages.Choke;
@@ -13,7 +16,8 @@ public class ChokeImpl extends PeerMessage<Choke> implements Choke {
    *
    * @param peer
    */
-  public ChokeImpl(Peer peer) {
+  @Inject
+  public ChokeImpl(@Assisted Peer peer) {
     super(peer, PeerMessage.Type.CHOKE);
   }
 }
