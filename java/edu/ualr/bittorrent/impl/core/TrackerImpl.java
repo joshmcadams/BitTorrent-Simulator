@@ -14,7 +14,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 
-import edu.ualr.bittorrent.impl.core.TrackerModule.TrackerRequestInterval;
+import edu.ualr.bittorrent.impl.core.ExperimentModule.TrackerRequestInterval;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.Tracker;
 import edu.ualr.bittorrent.interfaces.TrackerRequest;

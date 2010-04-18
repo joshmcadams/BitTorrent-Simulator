@@ -9,7 +9,9 @@ import org.joda.time.Instant;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 
+import edu.ualr.bittorrent.impl.core.ExperimentModule.PieceLength;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Tracker;
 
@@ -36,8 +38,9 @@ public class MetainfoImpl implements Metainfo {
    *          list of files in the torrent
    * @throws NoSuchAlgorithmException
    */
+  @Inject
   public MetainfoImpl(ImmutableList<Tracker> trackers,
-      ImmutableList<String> pieces, Integer pieceLength,
+      ImmutableList<String> pieces, @PieceLength Integer pieceLength,
       ImmutableList<File> files) throws NoSuchAlgorithmException {
     this.trackers = Preconditions.checkNotNull(trackers);
     this.pieces = Preconditions.checkNotNull(pieces);

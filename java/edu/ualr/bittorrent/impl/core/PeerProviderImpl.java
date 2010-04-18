@@ -8,6 +8,7 @@ import org.apache.log4j.Logger;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.inject.Inject;
 
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
@@ -29,6 +30,7 @@ public class PeerProviderImpl implements PeerProvider {
    * @param metainfo
    * @param pieces
    */
+  @Inject
   public PeerProviderImpl(Metainfo metainfo, Map<Integer, byte[]> pieces) {
     this.metainfo = Preconditions.checkNotNull(metainfo);
     this.pieces = Preconditions.checkNotNull(pieces);
