@@ -8,7 +8,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 
 import com.google.common.base.Preconditions;
@@ -168,8 +167,6 @@ public class Simulator {
    * @throws NoSuchAlgorithmException
    */
   public static void main(String[] args) throws NoSuchAlgorithmException {
-    BasicConfigurator.configure();
-
     final Integer trackerRequestInterval = 5000;
     Tracker tracker = new TrackerImpl(trackerRequestInterval);
     ImmutableList<Tracker> trackers = ImmutableList.of(tracker);
