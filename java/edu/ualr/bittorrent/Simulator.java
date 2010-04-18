@@ -17,6 +17,7 @@ import com.google.common.collect.Maps;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.TypeLiteral;
 
 import edu.ualr.bittorrent.impl.core.MetainfoImpl;
 import edu.ualr.bittorrent.impl.core.PeerProviderImpl;
@@ -177,9 +178,8 @@ public class Simulator {
   public static void main(String[] args) throws NoSuchAlgorithmException {
     Injector injector = Guice.createInjector(new TrackerModule());
 
-    Tracker tracker = injector.getInstance(Tracker.class);
-
-    ImmutableList<Tracker> trackers = ImmutableList.of(tracker);
+    ImmutableList<Tracker> trackers = ImmutableList.copyOf(injector.findBindingsByType(
+        new TypeLiteral<List<Tracker>>() {}).get(0).getProvider().get());
 
     final Integer pieceLength = 1000;
 
