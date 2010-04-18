@@ -18,8 +18,8 @@ public class HandshakeImpl extends PeerMessage<Handshake> implements Handshake {
                                             * default
                                             */
   private final byte[] reservedBytes; /* 0x00 x 8 is the default */
-  private static final String DEFAULT_PROTOCOL_IDENTIFIER = "BitTorrent protocol";
-  private static final byte[] DEFAULT_RESERVED_BYTES = { 0x00, 0x00, 0x00,
+  public static final String DEFAULT_PROTOCOL_IDENTIFIER = "BitTorrent protocol";
+  public static final byte[] DEFAULT_RESERVED_BYTES = { 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00 };
 
   /**

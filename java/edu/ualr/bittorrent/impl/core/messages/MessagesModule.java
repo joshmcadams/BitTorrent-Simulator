@@ -7,6 +7,7 @@ import edu.ualr.bittorrent.interfaces.messages.BitFieldFactory;
 import edu.ualr.bittorrent.interfaces.messages.CancelFactory;
 import edu.ualr.bittorrent.interfaces.messages.ChokeFactory;
 import edu.ualr.bittorrent.interfaces.messages.HandshakeFactory;
+import edu.ualr.bittorrent.interfaces.messages.HaveFactory;
 import edu.ualr.bittorrent.interfaces.messages.InterestedFactory;
 import edu.ualr.bittorrent.interfaces.messages.KeepAliveFactory;
 import edu.ualr.bittorrent.interfaces.messages.NotInterestedFactory;
@@ -15,6 +16,9 @@ import edu.ualr.bittorrent.interfaces.messages.PortFactory;
 import edu.ualr.bittorrent.interfaces.messages.RequestFactory;
 import edu.ualr.bittorrent.interfaces.messages.UnchokeFactory;
 
+/**
+ * Guice mappings to create factories for providing default implementations for messages.
+ */
 public class MessagesModule extends AbstractModule {
   @Override
   protected void configure() {
@@ -27,17 +31,26 @@ public class MessagesModule extends AbstractModule {
     bind(ChokeFactory.class).toProvider(
         FactoryProvider.newFactory(ChokeFactory.class, ChokeImpl.class));
 
-    bind(HandshakeFactory.class).toProvider(
-        FactoryProvider.newFactory(HandshakeFactory.class, HandshakeImpl.class));
+    bind(HandshakeFactory.class)
+        .toProvider(
+            FactoryProvider.newFactory(HandshakeFactory.class,
+                HandshakeImpl.class));
+
+    bind(HaveFactory.class).toProvider(
+        FactoryProvider.newFactory(HaveFactory.class, HaveImpl.class));
 
     bind(InterestedFactory.class).toProvider(
-        FactoryProvider.newFactory(InterestedFactory.class, InterestedImpl.class));
+        FactoryProvider.newFactory(InterestedFactory.class,
+            InterestedImpl.class));
 
-    bind(KeepAliveFactory.class).toProvider(
-        FactoryProvider.newFactory(KeepAliveFactory.class, KeepAliveImpl.class));
+    bind(KeepAliveFactory.class)
+        .toProvider(
+            FactoryProvider.newFactory(KeepAliveFactory.class,
+                KeepAliveImpl.class));
 
     bind(NotInterestedFactory.class).toProvider(
-        FactoryProvider.newFactory(NotInterestedFactory.class, NotInterestedImpl.class));
+        FactoryProvider.newFactory(NotInterestedFactory.class,
+            NotInterestedImpl.class));
 
     bind(PieceFactory.class).toProvider(
         FactoryProvider.newFactory(PieceFactory.class, PieceImpl.class));
@@ -50,5 +63,6 @@ public class MessagesModule extends AbstractModule {
 
     bind(UnchokeFactory.class).toProvider(
         FactoryProvider.newFactory(UnchokeFactory.class, UnchokeImpl.class));
+
   }
 }
