@@ -153,7 +153,6 @@ public class SimulatorImpl implements Simulator {
       }
       for (Peer peer : newPeers) {
         if (executor.isShutdown()) {
-          debug("Executor is shutdown");
           return;
         }
         debug("Requesting execution of peer %s", new String(peer.getId()));
