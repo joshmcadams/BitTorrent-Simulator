@@ -156,6 +156,14 @@ public class PeerImpl implements Peer {
   }
 
   /**
+   * {@inheritDoc}
+   */
+  @Override
+  public String toString() {
+    return new String(id);
+  }
+
+  /**
    * The PeerImpl is intended to run as a thread of a higher-level
    * {@link ExecutorService}. The peer itself creates a new
    * {@link ExecutorService} that it uses to spawn threads for parallel

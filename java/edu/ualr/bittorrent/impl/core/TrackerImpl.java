@@ -12,13 +12,16 @@ import org.joda.time.Instant;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Guice;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 
 import edu.ualr.bittorrent.impl.core.ExperimentModule.TrackerRequestInterval;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.Tracker;
 import edu.ualr.bittorrent.interfaces.TrackerRequest;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
+import edu.ualr.bittorrent.interfaces.TrackerResponseFactory;
 
 /**
  * Default implementation of the {@link Tracker} interface.
@@ -30,7 +33,20 @@ public class TrackerImpl implements Tracker {
 
   private final byte[] id;
   private final int interval;
+  private final Injector injector;
   private final Map<byte[], SwarmInfo> swarmInfoMap = new ConcurrentHashMap<byte[], SwarmInfo>();
+
+  private void debug(Object... objects) {
+    String formatString = (String) objects[0];
+    System.arraycopy(objects, 1, objects, 0, objects.length - 1);
+    logger.debug(String.format(formatString, objects));
+  }
+
+  private void info(Object... objects) {
+    String formatString = (String) objects[0];
+    System.arraycopy(objects, 1, objects, 0, objects.length - 1);
+    logger.info(String.format(formatString, objects));
+  }
 
   /**
    * Create a new tracker.
@@ -51,6 +67,7 @@ public class TrackerImpl implements Tracker {
   public TrackerImpl(byte[] id, int interval) {
     this.id = Preconditions.checkNotNull(id);
     this.interval = interval;
+    this.injector = Guice.createInjector(new TrackerResponseModule());
   }
 
   /**
@@ -58,9 +75,7 @@ public class TrackerImpl implements Tracker {
    */
   public TrackerResponse get(TrackerRequest request) {
     Preconditions.checkNotNull(request);
-    Peer peer = request.getPeer();
-    logger.info(String.format("Peer %s made a request to the tracker",
-        new String(peer.getId())));
+    debug("[peer: %s] [action: tracker request]", request.getPeer());
     return buildResponse(request);
   }
 
@@ -70,10 +85,10 @@ public class TrackerImpl implements Tracker {
   private TrackerResponse buildResponse(TrackerRequest request) {
     SwarmInfo swarmInfo = getSwarmInfo(request.getInfoHash());
     swarmInfo.logRequest(request);
-    TrackerResponse response = new TrackerResponseImpl(id, ImmutableList
-        .copyOf(swarmInfo.getListOfPeers(request)), swarmInfo.getSeederCount(),
-        swarmInfo.getLeechCount(), interval);
-    return response;
+    return injector.getInstance(TrackerResponseFactory.class).create(id,
+        ImmutableList.copyOf(swarmInfo.getListOfPeers(request)),
+        swarmInfo.getSeederCount(), swarmInfo.getLeechCount(), interval,
+        (Integer) null, (String) null, (String) null);
   }
 
   /**
@@ -122,6 +137,7 @@ public class TrackerImpl implements Tracker {
         seeders.remove(request.getPeer());
         leeches.put(request.getPeer(), new Instant());
       }
+      info("[seeders: %d][leechers: %d]", seeders.size(), leeches.size());
     }
 
     /**
@@ -166,8 +182,7 @@ public class TrackerImpl implements Tracker {
         }
       }
 
-      logger.info(String.format("Returning a list of %d peers", peerMap
-          .keySet().size()));
+      debug("Returning a list of %d peers", peerMap.keySet().size());
       return ImmutableList.copyOf(peerMap.keySet());
     }
 

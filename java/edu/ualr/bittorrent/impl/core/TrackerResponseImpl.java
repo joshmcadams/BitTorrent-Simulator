@@ -2,6 +2,9 @@ package edu.ualr.bittorrent.impl.core;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.internal.Nullable;
 
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
@@ -45,9 +48,15 @@ public class TrackerResponseImpl implements TrackerResponse {
    * @param failureReason
    * @param warningMessage
    */
-  public TrackerResponseImpl(byte[] trackerId, ImmutableList<Peer> peers,
-      int complete, int incomplete, int interval, Integer minInterval,
-      String failureReason, String warningMessage) {
+  @Inject
+  public TrackerResponseImpl(@Assisted("trackerId") byte[] trackerId,
+      @Assisted("peers") ImmutableList<Peer> peers,
+      @Assisted("seederCount") int complete,
+      @Assisted("leecherCount") int incomplete,
+      @Assisted("interval") int interval,
+      @Nullable @Assisted("minInterval") Integer minInterval,
+      @Nullable @Assisted("failureMessage") String failureReason,
+      @Nullable @Assisted("warningMessage") String warningMessage) {
     this.trackerId = Preconditions.checkNotNull(trackerId);
     this.peers = Preconditions.checkNotNull(peers);
     this.complete = Preconditions.checkNotNull(complete);

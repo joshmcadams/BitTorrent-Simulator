@@ -17,7 +17,6 @@ public class Experiment {
    */
   public static void main(String[] args) {
     Injector injector = Guice.createInjector(new ExperimentModule());
-
     SimulatorImpl simulator = injector.getInstance(SimulatorImpl.class);
     simulator.runExperiment(injector.getInstance(Key.get(Long.class,
         ExperimentTimeout.class)));
