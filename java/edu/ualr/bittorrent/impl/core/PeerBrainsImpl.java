@@ -120,6 +120,40 @@ public class PeerBrainsImpl implements PeerBrains {
     return false;
   }
 
+  private boolean askForSomethingFromPeer(Peer p, PeerState state,
+      List<Pair<Peer, Message>> messages) {
+    /*
+     * Let peers that are choking and that have pieces that we want know that
+     * we are interested
+     */
+    expressInterest(p, state, messages);
+
+    /* request pieces from peers */
+    makeRequests(p, state, messages);
+
+    return false;
+  }
+
+  private boolean respondToPeerRequests(Peer p, PeerState state,
+      List<Pair<Peer, Message>> messages) {
+    /* Unchoke some peers if there are any that seem worthy */
+    unchoke(p, state, messages);
+
+    sendPieces(p, state, messages);
+
+    cancelPieceRequests(p, state, messages);
+
+    return false;
+  }
+
+  private boolean sendMeaningfuleMessageToPeer(Peer p, PeerState state,
+      List<Pair<Peer, Message>> messages) {
+    boolean messageSent = false;
+    messageSent = askForSomethingFromPeer(p, state, messages);
+    messageSent &= respondToPeerRequests(p, state, messages);
+    return messageSent;
+  }
+
   /**
    * {@inheritDoc}
    */
@@ -143,28 +177,18 @@ public class PeerBrainsImpl implements PeerBrains {
         continue;
       }
 
-      if(handleCommunicationInitalization(p, state, messages)) {
+      if (handleCommunicationInitalization(p, state, messages)) {
         continue;
       }
 
       /* Let the remote peer know about any new pieces that we might have */
-      letPeerKnowAboutNewPieces(p, state, messages);
+      if (letPeerKnowAboutNewPieces(p, state, messages)) {
+        continue;
+      }
 
-      /*
-       * Let peers that are choking and that have peices that we want know that
-       * we are interested
-       */
-      expressInterest(p, state, messages);
-
-      /* Unchoke some peers if there are any that seem worthy */
-      unchoke(p, state, messages);
-
-      /* request pieces from peers */
-      makeRequests(p, state, messages);
-
-      sendPieces(p, state, messages);
-
-      cancelPieceRequests(p, state, messages);
+      if (sendMeaningfuleMessageToPeer(p, state, messages)) {
+        continue;
+      }
 
       /* If no other messages are necessary, just send a keep alive */
       sendKeepAlive(p, state, messages);
