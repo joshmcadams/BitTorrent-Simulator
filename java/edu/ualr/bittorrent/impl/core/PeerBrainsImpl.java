@@ -81,6 +81,45 @@ public class PeerBrainsImpl implements PeerBrains {
     this.data = Preconditions.checkNotNull(data);
   }
 
+  private PeerState returnStateIfAvailable(Peer p) {
+    if (p.equals(localPeer)) {
+      return null;
+    }
+
+    PeerState state = null;
+    synchronized (activePeers) {
+      if (activePeers.containsKey(p)) {
+        state = activePeers.get(p);
+      }
+    }
+
+    return state;
+  }
+
+  private boolean handleCommunicationInitalization(Peer p, PeerState state,
+      List<Pair<Peer, Message>> messages) {
+    /* If the local client hasn't sent a handshake to this peer yet, send one */
+    if (sendHandshake(p, state, messages)) {
+      return true;
+    }
+
+    /* If the remote peer hasn't sent a handshake yet, send them another */
+    if (!remoteHasSentHandshake(p, state, messages)) {
+      return true;
+    }
+
+    /*
+     * If we haven't started communicating with this peer yet, then the choke
+     * status will be null. If this is the case, go ahead and send a choke
+     * message to make the initial choke state official.
+     */
+    if (sendInitialChoke(p, state, messages)) {
+      return true;
+    }
+
+    return false;
+  }
+
   /**
    * {@inheritDoc}
    */
@@ -99,40 +138,12 @@ public class PeerBrainsImpl implements PeerBrains {
     }
 
     for (Peer p : peers) {
-
-      if (p.equals(localPeer)) {
-        continue;
-      }
-
-      PeerState state = null;
-      synchronized (activePeers) {
-        if (activePeers.containsKey(p)) {
-          state = activePeers.get(p);
-        }
-      }
-
+      PeerState state = returnStateIfAvailable(p);
       if (state == null) {
         continue;
       }
 
-      /* If the local client hasn't sent a handshake to this peer yet, send one */
-      if (sendHandshake(p, state, messages)) {
-        continue;
-      }
-
-      /* If the remote peer hasn't sent a handshake yet, send them another */
-
-      if (!remoteHasSentHandshake(p, state, messages)) {
-        continue;
-      }
-
-      /*
-       * If we haven't started communicating with this peer yet, then the choke
-       * status will be null. If this is the case, go ahead and send a choke
-       * message to make the initial choke state official.
-       */
-
-      if (sendInitialChoke(p, state, messages)) {
+      if(handleCommunicationInitalization(p, state, messages)) {
         continue;
       }
 
