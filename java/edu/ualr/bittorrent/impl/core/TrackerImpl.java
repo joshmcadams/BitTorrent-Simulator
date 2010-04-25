@@ -174,7 +174,7 @@ public class TrackerImpl implements Tracker {
           peer = seederKeys
               .get((int) (Math.random() * (seederKeys.size() - 1)));
         } else {
-          peer = leechKeys.get((int) (Math.random() * (seederKeys.size() - 1)));
+          peer = leechKeys.get((int) (Math.random() * (leechKeys.size() - 1)));
         }
 
         if (!peer.equals(request.getPeer())) {
