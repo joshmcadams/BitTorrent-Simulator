@@ -3,6 +3,7 @@ package edu.ualr.bittorrent.interfaces;
 import java.util.List;
 import java.util.Map;
 
+import com.google.inject.internal.Nullable;
 import com.sun.tools.javac.util.Pair;
 
 /**
@@ -17,7 +18,7 @@ public interface PeerBrains {
    *
    * @param lcoal
    */
-  public void setLocalPeer(Peer lcoal);
+  public void setLocalPeer(Peer local);
 
   /**
    * Share a map of known remote {@link Peer}s and their states with the brain.
@@ -42,9 +43,13 @@ public interface PeerBrains {
 
   /**
    * The brain gives the {@link Peer} a list of messages to dispatch to other
-   * {@link Peer}s.
+   * {@link Peer}s. This method is called periodically with no specific message
+   * just to give the brain an opportunity to initiate action. It is also called
+   * every time a remote peer sends a message in order to give the local peer a
+   * chance to respond in a timely manner.
    *
    * @return
    */
-  public List<Pair<Peer, Message>> getMessagesToDispatch();
+  public List<Pair<Peer, Message>> getMessagesToDispatch(
+      @Nullable Message message);
 }

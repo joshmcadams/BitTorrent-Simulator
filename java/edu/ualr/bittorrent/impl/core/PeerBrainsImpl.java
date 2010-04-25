@@ -8,9 +8,9 @@ import org.joda.time.Instant;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.internal.Nullable;
 import com.sun.tools.javac.util.Pair;
 
 import edu.ualr.bittorrent.impl.core.messages.HandshakeImpl;
@@ -165,47 +165,101 @@ public class PeerBrainsImpl implements PeerBrains {
     return messageSent;
   }
 
+  public List<Pair<Peer, Message>> initiateCommunication() {
+    return null;
+  }
+
+  public List<Pair<Peer, Message>> respondToASpecificMessage(
+      @Nullable Message message) {
+    return null;
+  }
+
   /**
    * {@inheritDoc}
    */
-  public List<Pair<Peer, Message>> getMessagesToDispatch() {
+  public List<Pair<Peer, Message>> getMessagesToDispatch(
+      @Nullable Message message) {
     Preconditions.checkNotNull(localPeer);
     Preconditions.checkNotNull(activePeers);
     Preconditions.checkNotNull(metainfo);
     Preconditions.checkNotNull(data);
 
-    List<Pair<Peer, Message>> messages = Lists.newArrayList();
-
-    Set<Peer> peers;
-
-    synchronized (activePeers) {
-      peers = activePeers.keySet();
+    if (message == null) {
+      return initiateCommunication();
+    } else {
+      return respondToASpecificMessage(message);
     }
-
-    for (Peer p : peers) {
-      PeerState state = returnStateIfAvailable(p);
-      if (state == null) {
-        continue;
-      }
-
-      if (handleCommunicationInitalization(p, state, messages)) {
-        continue;
-      }
-
-      /* Let the remote peer know about any new pieces that we might have */
-      if (letPeerKnowAboutNewPieces(p, state, messages)) {
-        continue;
-      }
-
-      if (sendMeaningfuleMessageToPeer(p, state, messages)) {
-        continue;
-      }
-
-      /* If no other messages are necessary, just send a keep alive */
-      sendKeepAlive(p, state, messages);
-    }
-
-    return messages;
+    /*
+     *
+     * List<Pair<Peer, Message>> messages = Lists.newArrayList();
+     *
+     * BitField messages will not be processed in this experiment. Port messages
+     * will not be processed in this experiment.
+     *
+     * Handshake Any peer that I have not sent a handshake too will be sent a
+     * handshake.
+     *
+     * Any peer that I have sent a handshake too, but who has not shaken back
+     * over the last x period of time will receive another handshake. After n
+     * attempts, the peer will be ignored.
+     *
+     * If a receive a handshake, i will accept it. If i recieve repeated
+     * handshakes, I will respond with my own handshake.
+     *
+     * Choke Any peer that I have shaken hands with, but have not choked will be
+     * choked.
+     *
+     * Periodically, I will choke peers that I feel are currently unworthy.
+     *
+     * Have All peers should get an updated have list from me.
+     *
+     * Cancel After I receive a piece from a peer, I will tell other peers that
+     * are sending that piece that I no longer need it.
+     *
+     * Interested If a peer sends an interested message and it choked, I will
+     * consider unchoking them.
+     *
+     * If I am choked by a peer, but would like to get data from them, I will
+     * express interest.
+     *
+     * Not Interested If I am choked by a peer, I will let that peer know that I
+     * don't care if I'm unchoked by expressing a lack of interest.
+     *
+     * If a peer expresses disinterest in me, I will choke that peer if they are
+     * unchoked.
+     *
+     * Piece If an unchoked peer makes a request to me, I will do my best to
+     * honor that request.
+     *
+     * Request If I am unchoked and a peer has data that I need, I will request
+     * it from that peer. If the peer does not respond in a reasonable amount of
+     * time, I will request the data from another peer.
+     *
+     * Unchoke If a peer is choked and has expressed interest and if I have a
+     * slot open, I will unchoke the peer for a limited period of time to give
+     * them a chance to request data from me.
+     *
+     * KeepAlive If I have no other message to send a peer, I will send it a
+     * keep alive. Set<Peer> peers;
+     *
+     * synchronized (activePeers) { peers = activePeers.keySet(); }
+     *
+     * for (Peer p : peers) { messages.addAll(makePeerLevelDecisions());
+     * PeerState state = returnStateIfAvailable(p); if (state == null) {
+     * continue; }
+     *
+     * if (handleCommunicationInitalization(p, state, messages)) { continue; }
+     *
+     * Let the remote peer know about any new pieces that we might have if
+     * (letPeerKnowAboutNewPieces(p, state, messages)) { continue; }
+     *
+     * if (sendMeaningfuleMessageToPeer(p, state, messages)) { continue; }
+     *
+     * If no other messages are necessary, just send a keep alive
+     * sendKeepAlive(p, state, messages); }
+     *
+     * return messages;
+     */
   }
 
   /**
@@ -252,11 +306,12 @@ public class PeerBrainsImpl implements PeerBrains {
 
     if (remoteSentHandshakeAt == null) {
       // shake again just to be sure that the remote got ours
-/*      messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-          HandshakeFactory.class).create(localPeer, remotePeer,
-          HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
-          HandshakeImpl.DEFAULT_RESERVED_BYTES)));
-*/
+      /*
+       * messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
+       * HandshakeFactory.class).create(localPeer, remotePeer,
+       * HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
+       * HandshakeImpl.DEFAULT_RESERVED_BYTES)));
+       */
       return false;
     }
     return true;

@@ -586,7 +586,7 @@ public class PeerImpl implements Peer {
         // through the messages,
         // logging and dispatching each one
         for (Pair<Peer, Message> peerAndMessage : brains
-            .getMessagesToDispatch()) {
+            .getMessagesToDispatch(null)) {
           sendMessage(peerAndMessage.fst, peerAndMessage.snd);
         }
 
