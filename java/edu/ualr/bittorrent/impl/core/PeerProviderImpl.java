@@ -3,8 +3,6 @@ package edu.ualr.bittorrent.impl.core;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -18,8 +16,6 @@ import edu.ualr.bittorrent.interfaces.PeerProvider;
  * Default implementation of the {@link PeerProvider} interface.
  */
 public class PeerProviderImpl implements PeerProvider {
-  private static Logger logger = Logger.getLogger(PeerProviderImpl.class);
-
   private boolean alreadyCalled = false;
   private final Metainfo metainfo;
   private final Map<Integer, byte[]> pieces;
@@ -45,17 +41,13 @@ public class PeerProviderImpl implements PeerProvider {
     }
     alreadyCalled = true;
     List<Peer> peers = Lists.newArrayList();
-    logger.info("adding seeds");
     for (int i = 0; i < 1; i++) {
       Peer peer = new PeerImpl(pieces);
-      logger.info(String.format("Adding seed %s", new String(peer.getId())));
       peer.setMetainfo(metainfo);
       peers.add(peer);
     }
-    logger.info("adding peers");
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 10; i++) {
       Peer peer = new PeerImpl();
-      logger.info(String.format("Adding peer %s", new String(peer.getId())));
       peer.setMetainfo(metainfo);
       peers.add(peer);
     }

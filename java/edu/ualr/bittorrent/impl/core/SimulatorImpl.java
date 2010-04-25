@@ -5,8 +5,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.log4j.Logger;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -31,14 +29,6 @@ public class SimulatorImpl implements Simulator {
   private final Metainfo metainfo;
   private final List<Peer> peers = Lists.newArrayList();
   private final ExecutorService executor;
-
-  private final static Logger logger = Logger.getLogger(SimulatorImpl.class);
-
-  private void debug(Object... objects) {
-    String formatString = (String) objects[0];
-    System.arraycopy(objects, 1, objects, 0, objects.length - 1);
-    logger.debug(String.format(formatString, objects));
-  }
 
   /**
    * Create a new {@link SimulatorImpl}.
@@ -83,10 +73,8 @@ public class SimulatorImpl implements Simulator {
      */
     public void run() {
       try {
-        debug("Experiment limited to %d milliseconds", millisecondsToRun);
         executor.awaitTermination(millisecondsToRun, TimeUnit.MILLISECONDS);
         if (!executor.isShutdown()) {
-          debug("Stopping experiment before all threads are complete");
           executor.shutdown();
         }
       } catch (InterruptedException e) {
@@ -101,8 +89,6 @@ public class SimulatorImpl implements Simulator {
    * @param millisecondsToRun
    */
   public void runExperiment(@Nullable Long millisecondsToRun) {
-    debug("Experiment starting");
-
     setTimeout(millisecondsToRun);
 
     try {
@@ -147,7 +133,6 @@ public class SimulatorImpl implements Simulator {
   private void spawnPeers() {
     ImmutableList<Peer> newPeers;
     while ((newPeers = peerProvider.addPeers()) != null) {
-      debug("Provided with %d new peers", newPeers.size());
       synchronized (peers) {
         peers.addAll(newPeers);
       }
@@ -155,7 +140,6 @@ public class SimulatorImpl implements Simulator {
         if (executor.isShutdown()) {
           return;
         }
-        debug("Requesting execution of peer %s", new String(peer.getId()));
         executor.execute(peer);
       }
     }

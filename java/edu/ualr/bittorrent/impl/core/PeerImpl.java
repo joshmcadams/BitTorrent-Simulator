@@ -9,7 +9,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.log4j.Logger;
 import org.joda.time.Instant;
 
 import com.google.common.base.Objects;
@@ -53,7 +52,6 @@ public class PeerImpl implements Peer {
   private final byte[] id;
   private Metainfo metainfo;
   private final PeerBrains brains;
-  private static final Logger logger = Logger.getLogger(PeerImpl.class);
   private final List<Message> messageQueue = Lists.newArrayList();
   private final AtomicInteger downloaded = new AtomicInteger();
   private final AtomicInteger uploaded = new AtomicInteger();
@@ -236,12 +234,6 @@ public class PeerImpl implements Peer {
         synchronized (state) {
           state.setRemoteHasPiece(declaration);
         }
-        logger
-            .info(String
-                .format(
-                    "Remote peer %s sent bitfield message declaring piece %d to peer %s",
-                    new String(bitfield.getSendingPeer().getId()), i,
-                    new String(id)));
       }
     }
   }
@@ -509,8 +501,6 @@ public class PeerImpl implements Peer {
      */
     public void run() {
       while (true) {
-        logger
-            .info(String.format("Peer %s contacting tracker", new String(id)));
         TrackerResponse response = tracker.get(new TrackerRequestImpl(parent,
             infoHash, downloaded.get(), uploaded.get(), remaining.get()));
         for (Peer peer : response.getPeers()) {
@@ -632,12 +622,6 @@ public class PeerImpl implements Peer {
         synchronized (state) {
           state.setRemoteHasPiece(declaration);
         }
-        logger
-            .info(String
-                .format(
-                    "Remote peer %s sent bitfield message declaring piece %d to peer %s",
-                    new String(bitfield.getSendingPeer().getId()), i,
-                    new String(id)));
       }
     }
 

@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
 import org.joda.time.Instant;
 
 import com.google.common.base.Preconditions;
@@ -45,15 +44,8 @@ public class PeerBrainsImpl implements PeerBrains {
   private Peer localPeer;
   private Metainfo metainfo;
   private Map<Integer, byte[]> data;
-  private static final Logger logger = Logger.getLogger(PeerBrainsImpl.class);
   private static final Integer UNCHOKED_PEER_LIMIT = 100;
   private final Injector injector;
-
-  private void debug(Object... objects) {
-    String formatString = (String) objects[0];
-    System.arraycopy(objects, 1, objects, 0, objects.length - 1);
-    logger.debug(String.format(formatString, objects));
-  }
 
   public PeerBrainsImpl() {
     this.injector = Guice.createInjector(new MessagesModule());
@@ -232,8 +224,6 @@ public class PeerBrainsImpl implements PeerBrains {
       localSentHandshakeAt = state.whenDidLocalSendHandshake();
     }
     if (localSentHandshakeAt == null) {
-      debug("[action: handshake][local: %s][remote: %s]", localPeer, remotePeer);
-
       messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
           HandshakeFactory.class).create(localPeer, remotePeer,
           HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
@@ -262,8 +252,6 @@ public class PeerBrainsImpl implements PeerBrains {
 
     if (remoteSentHandshakeAt == null) {
       // shake again just to be sure that the remote got ours
-      debug("[action: handshake][local: %s][remote: %s]", localPeer, remotePeer);
-
       messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
           HandshakeFactory.class).create(localPeer, remotePeer,
           HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
@@ -291,8 +279,6 @@ public class PeerBrainsImpl implements PeerBrains {
     }
 
     if (choked == null) {
-      debug("[action: choke][local: %s][remote: %s]", localPeer, remotePeer);
-
       messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
           ChokeFactory.class).create(localPeer, remotePeer)));
 
@@ -562,10 +548,6 @@ public class PeerBrainsImpl implements PeerBrains {
     }
 
     // TODO: make the bytes match the requested size
-
-    debug("[action: piece][index: %d][local:%s][remote %s]", requestedIndex,
-        localPeer, remotePeer);
-
     messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
         PieceFactory.class).create(localPeer, remotePeer, requestedIndex,
         requestedOffset, bytes)));

@@ -2,7 +2,6 @@ package edu.ualr.bittorrent.impl.core;
 
 import java.util.List;
 
-import org.apache.log4j.Logger;
 import org.joda.time.Instant;
 
 import com.google.common.base.Objects;
@@ -33,7 +32,6 @@ public class PeerStateImpl implements PeerState {
   List<PieceUpload> piecesUploaded = Lists.newArrayList();
   List<PieceDeclaration> remoteDeclaredPieces = Lists.newArrayList();
   List<PieceDeclaration> localDeclaredPieces = Lists.newArrayList();
-  private static final Logger logger = Logger.getLogger(PeerStateImpl.class);
 
   /**
    * Default implementation of the {@link PieceTransfer} interface.
@@ -498,8 +496,6 @@ public class PeerStateImpl implements PeerState {
 
     synchronized (piecesRequestedByRemote) {
       while (piecesRequestedByRemote.remove(request)) {
-        logger.info(String.format(
-            "Piece %s removed from pieces requested by remote queue", request));
       }
     }
   }
