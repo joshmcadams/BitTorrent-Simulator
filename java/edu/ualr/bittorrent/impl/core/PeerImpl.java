@@ -25,6 +25,7 @@ import edu.ualr.bittorrent.interfaces.PeerBrains;
 import edu.ualr.bittorrent.interfaces.PeerState;
 import edu.ualr.bittorrent.interfaces.Tracker;
 import edu.ualr.bittorrent.interfaces.TrackerResponse;
+import edu.ualr.bittorrent.interfaces.Metainfo.File;
 import edu.ualr.bittorrent.interfaces.PeerState.ChokeStatus;
 import edu.ualr.bittorrent.interfaces.PeerState.InterestLevel;
 import edu.ualr.bittorrent.interfaces.PeerState.PieceDeclaration;
@@ -59,6 +60,10 @@ public class PeerImpl implements Peer {
   private final Map<Peer, PeerState> activePeers = new ConcurrentHashMap<Peer, PeerState>();
   private final ConcurrentLinkedQueue<Peer> newlyReportedPeers = new ConcurrentLinkedQueue<Peer>();
   private final Map<Integer, byte[]> data;
+  private int lastPieceIndex;
+  private int lastPieceSize;
+  private int totalDownloadSize;
+  private int pieceLength;
 
   /**
    * Create a new PeerImpl object, providing a unique ID, the brains of the
@@ -115,6 +120,17 @@ public class PeerImpl implements Peer {
   public void setMetainfo(Metainfo metainfo) {
     this.metainfo = Preconditions.checkNotNull(metainfo);
     this.tracker = Preconditions.checkNotNull(metainfo.getTrackers().get(0));
+    lastPieceIndex = metainfo.getPieces().size() - 1;
+    pieceLength = metainfo.getPieceLength();
+
+    totalDownloadSize = 0;
+    for (File file : metainfo.getFiles()) {
+      totalDownloadSize += file.getLength();
+    }
+    lastPieceSize = totalDownloadSize % metainfo.getPieceLength();
+    if (lastPieceSize == 0) {
+      lastPieceSize = pieceLength;
+    }
   }
 
   /**
@@ -183,6 +199,10 @@ public class PeerImpl implements Peer {
     brains.setMetainfo(metainfo);
     brains.setData(data);
 
+    synchronized (remaining) {
+      remaining.set(howMuchIsLeftToDownload());
+    }
+
     ExecutorService executor = Executors.newFixedThreadPool(2);
 
     // line of communication with the tracker
@@ -191,7 +211,6 @@ public class PeerImpl implements Peer {
     // outbound peer communication
     executor.execute(new PeerTalkerManager(this));
 
-    int piecesDownloaded = 0;
     // inbound peer communication
     while (true) {
       Message message = null;
@@ -202,14 +221,6 @@ public class PeerImpl implements Peer {
       }
       if (message != null) {
         processMessage(message);
-      }
-
-      int newPiecesDownloaded = 0;
-      synchronized (data) {
-        newPiecesDownloaded = data.size();
-      }
-      if (newPiecesDownloaded != piecesDownloaded) {
-        piecesDownloaded = newPiecesDownloaded;
       }
     }
   }
@@ -415,6 +426,32 @@ public class PeerImpl implements Peer {
     synchronized (data) {
       data.put(piece.getPieceIndex(), piece.getBlock());
     }
+
+    synchronized (remaining) {
+      remaining.set(howMuchIsLeftToDownload());
+    }
+
+    synchronized (downloaded) {
+      downloaded.addAndGet(piece.getBlock().length);
+    }
+  }
+
+  private int howMuchIsLeftToDownload() {
+    int downloadedPieceCount = 0;
+    boolean downloadedLastPiece = false;
+
+    synchronized (data) {
+      downloadedPieceCount = data.size();
+      downloadedLastPiece = data.containsKey(lastPieceIndex);
+    }
+
+    int downloadedAmount = downloadedPieceCount * metainfo.getPieceLength();
+
+    if (downloadedLastPiece) {
+      downloadedAmount -= (metainfo.getPieceLength() - lastPieceSize);
+    }
+
+    return totalDownloadSize - downloadedAmount;
   }
 
   /**
@@ -763,6 +800,10 @@ public class PeerImpl implements Peer {
 
     synchronized (state) {
       state.setLocalSentPiece(pieceUpload);
+    }
+
+    synchronized (uploaded) {
+      uploaded.addAndGet(piece.getBlock().length);
     }
 
     remotePeer.message(piece);
