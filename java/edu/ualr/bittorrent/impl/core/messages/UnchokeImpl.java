@@ -17,7 +17,8 @@ public class UnchokeImpl extends PeerMessage<Unchoke> implements Unchoke {
    * @param peer
    */
   @Inject
-  public UnchokeImpl(@Assisted Peer peer) {
-    super(peer, PeerMessage.Type.UNCHOKE);
+  public UnchokeImpl(@Assisted("sendingPeer") Peer sendingPeer,
+      @Assisted("receivingPeer") Peer receivingPeer) {
+    super(sendingPeer, receivingPeer, PeerMessage.Type.UNCHOKE);
   }
 }

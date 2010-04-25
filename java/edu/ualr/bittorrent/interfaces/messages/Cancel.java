@@ -1,6 +1,7 @@
 package edu.ualr.bittorrent.interfaces.messages;
 
-import edu.ualr.bittorrent.interfaces.HasPeer;
+import edu.ualr.bittorrent.interfaces.HasReceivingPeer;
+import edu.ualr.bittorrent.interfaces.HasSendingPeer;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Peer;
 
@@ -12,7 +13,7 @@ import edu.ualr.bittorrent.interfaces.Peer;
  * Objects that act as the {@link Cancel} message should implement this
  * interface.
  */
-public interface Cancel extends HasPeer, Message {
+public interface Cancel extends HasSendingPeer, HasReceivingPeer, Message {
   /**
    * Return the index of the piece (zero-offset) that was requested.
    *

@@ -28,7 +28,7 @@ import edu.ualr.bittorrent.interfaces.messages.Piece;
  * <li>UNCHOKE: {@link UnChoke}</li>
  * </ul>
  */
-public interface Message extends HasPeer {
+public interface Message extends HasSendingPeer, HasReceivingPeer {
   /**
    * Types of messages detailed in the BitTorrent specification.
    */

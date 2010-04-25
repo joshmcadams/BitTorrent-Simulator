@@ -19,8 +19,8 @@ public class HandshakeImpl extends PeerMessage<Handshake> implements Handshake {
                                             */
   private final byte[] reservedBytes; /* 0x00 x 8 is the default */
   public static final String DEFAULT_PROTOCOL_IDENTIFIER = "BitTorrent protocol";
-  public static final byte[] DEFAULT_RESERVED_BYTES = { 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00 };
+  public static final byte[] DEFAULT_RESERVED_BYTES = { 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00 };
 
   /**
    * Create a new handshake message.
@@ -28,8 +28,9 @@ public class HandshakeImpl extends PeerMessage<Handshake> implements Handshake {
    * @param infoHash
    * @param peer
    */
-  public HandshakeImpl(Peer peer, byte[] infoHash) {
-    this(peer, infoHash, DEFAULT_PROTOCOL_IDENTIFIER, DEFAULT_RESERVED_BYTES);
+  public HandshakeImpl(Peer sendingPeer, Peer receivingPeer, byte[] infoHash) {
+    this(sendingPeer, receivingPeer, infoHash, DEFAULT_PROTOCOL_IDENTIFIER,
+        DEFAULT_RESERVED_BYTES);
   }
 
   /**
@@ -41,10 +42,12 @@ public class HandshakeImpl extends PeerMessage<Handshake> implements Handshake {
    * @param reservedBytes
    */
   @Inject
-  HandshakeImpl(@Assisted Peer peer, @Assisted("infoHash") byte[] infoHash,
+  HandshakeImpl(@Assisted("sendingPeer") Peer sendingPeer,
+      @Assisted("receivingPeer") Peer receivingPeer,
+      @Assisted("infoHash") byte[] infoHash,
       @Assisted String protocolIdentifier,
       @Assisted("reservedBytes") byte[] reservedBytes) {
-    super(peer, PeerMessage.Type.HANDSHAKE);
+    super(sendingPeer, receivingPeer, PeerMessage.Type.HANDSHAKE);
     this.infoHash = Preconditions.checkNotNull(infoHash);
     this.protocolIdentifier = Preconditions.checkNotNull(protocolIdentifier);
     this.reservedBytes = Preconditions.checkNotNull(reservedBytes);

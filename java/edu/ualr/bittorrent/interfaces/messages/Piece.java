@@ -1,6 +1,7 @@
 package edu.ualr.bittorrent.interfaces.messages;
 
-import edu.ualr.bittorrent.interfaces.HasPeer;
+import edu.ualr.bittorrent.interfaces.HasReceivingPeer;
+import edu.ualr.bittorrent.interfaces.HasSendingPeer;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Peer;
 
@@ -11,7 +12,7 @@ import edu.ualr.bittorrent.interfaces.Peer;
  *
  * Objects that act as {@link Piece} messages should implement this interface.
  */
-public interface Piece extends HasPeer, Message {
+public interface Piece extends HasSendingPeer, HasReceivingPeer, Message {
   /**
    * Return the index (zero-based) of the piece that was requested.
    *

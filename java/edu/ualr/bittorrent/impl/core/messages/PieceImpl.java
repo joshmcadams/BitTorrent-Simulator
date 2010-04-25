@@ -25,9 +25,11 @@ public class PieceImpl extends PeerMessage<Piece> implements Piece {
    * @param block
    */
   @Inject
-  public PieceImpl(@Assisted Peer peer, @Assisted("pieceIndex") int pieceIndex,
+  public PieceImpl(@Assisted("sendingPeer") Peer sendingPeer,
+      @Assisted("receivingPeer") Peer receivingPeer,
+      @Assisted("pieceIndex") int pieceIndex,
       @Assisted("beginningOffset") int beginningOffset, @Assisted byte[] block) {
-    super(peer, PeerMessage.Type.PIECE);
+    super(sendingPeer, receivingPeer, PeerMessage.Type.PIECE);
     this.pieceIndex = pieceIndex;
     this.beginningOffset = beginningOffset;
     this.block = Preconditions.checkNotNull(block);

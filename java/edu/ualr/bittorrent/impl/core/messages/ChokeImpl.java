@@ -17,7 +17,8 @@ public class ChokeImpl extends PeerMessage<Choke> implements Choke {
    * @param peer
    */
   @Inject
-  public ChokeImpl(@Assisted Peer peer) {
-    super(peer, PeerMessage.Type.CHOKE);
+  public ChokeImpl(@Assisted("sendingPeer") Peer sendingPeer,
+      @Assisted("receivingPeer") Peer receivingPeer) {
+    super(sendingPeer, receivingPeer, PeerMessage.Type.CHOKE);
   }
 }

@@ -24,9 +24,12 @@ public class CancelImpl extends PeerMessage<Cancel> implements Cancel {
    * @param length
    */
   @Inject
-  public CancelImpl(@Assisted Peer peer, @Assisted("pieceIndex") int index,
-      @Assisted("beginningOffset") int begin, @Assisted("blockLength") int length) {
-    super(peer, PeerMessage.Type.CANCEL);
+  public CancelImpl(@Assisted("sendingPeer") Peer sendingPeer,
+      @Assisted("receivingPeer") Peer receivingPeer,
+      @Assisted("pieceIndex") int index,
+      @Assisted("beginningOffset") int begin,
+      @Assisted("blockLength") int length) {
+    super(sendingPeer, receivingPeer, PeerMessage.Type.CANCEL);
     this.index = index;
     this.begin = begin;
     this.length = length;

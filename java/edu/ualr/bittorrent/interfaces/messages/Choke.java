@@ -1,6 +1,7 @@
 package edu.ualr.bittorrent.interfaces.messages;
 
-import edu.ualr.bittorrent.interfaces.HasPeer;
+import edu.ualr.bittorrent.interfaces.HasReceivingPeer;
+import edu.ualr.bittorrent.interfaces.HasSendingPeer;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Peer;
 
@@ -12,6 +13,6 @@ import edu.ualr.bittorrent.interfaces.Peer;
  * Objects that will serve as {@link Choke} messages should implement this
  * interface.
  */
-public interface Choke extends HasPeer, Message {
+public interface Choke extends HasSendingPeer, HasReceivingPeer, Message {
 
 }

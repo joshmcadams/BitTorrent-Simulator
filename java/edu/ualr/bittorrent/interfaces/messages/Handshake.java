@@ -1,6 +1,7 @@
 package edu.ualr.bittorrent.interfaces.messages;
 
-import edu.ualr.bittorrent.interfaces.HasPeer;
+import edu.ualr.bittorrent.interfaces.HasReceivingPeer;
+import edu.ualr.bittorrent.interfaces.HasSendingPeer;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
@@ -12,7 +13,7 @@ import edu.ualr.bittorrent.interfaces.Peer;
  *
  * Objects that will act as a {@link Handshake} should implement this interface.
  */
-public interface Handshake extends HasPeer, Message {
+public interface Handshake extends HasSendingPeer, HasReceivingPeer, Message {
   /**
    * Return an identifier that specifies the protocol being spoken. Typically
    * this is just a hard-coded indicator of the current version of the

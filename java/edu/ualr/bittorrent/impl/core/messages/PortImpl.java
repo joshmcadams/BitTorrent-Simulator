@@ -20,8 +20,9 @@ public class PortImpl extends PeerMessage<Port> implements Port {
    * @param port
    */
   @Inject
-  public PortImpl(@Assisted Peer peer, @Assisted int port) {
-    super(peer, PeerMessage.Type.PORT);
+  public PortImpl(@Assisted("sendingPeer") Peer sendingPeer,
+      @Assisted("receivingPeer") Peer receivingPeer, @Assisted int port) {
+    super(sendingPeer, receivingPeer, PeerMessage.Type.PORT);
     this.port = port;
   }
 

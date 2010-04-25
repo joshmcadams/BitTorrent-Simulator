@@ -18,7 +18,8 @@ public class NotInterestedImpl extends PeerMessage<NotInterested> implements
    * @param peer
    */
   @Inject
-  public NotInterestedImpl(@Assisted Peer peer) {
-    super(peer, PeerMessage.Type.NOT_INTERESTED);
+  public NotInterestedImpl(@Assisted("sendingPeer") Peer sendingPeer,
+      @Assisted("receivingPeer") Peer receivingPeer) {
+    super(sendingPeer, receivingPeer, PeerMessage.Type.NOT_INTERESTED);
   }
 }

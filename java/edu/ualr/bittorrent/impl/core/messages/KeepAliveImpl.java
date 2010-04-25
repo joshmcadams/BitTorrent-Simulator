@@ -17,7 +17,8 @@ public class KeepAliveImpl extends PeerMessage<KeepAlive> implements KeepAlive {
    * @param peer
    */
   @Inject
-  public KeepAliveImpl(@Assisted Peer peer) {
-    super(peer, PeerMessage.Type.KEEP_ALIVE);
+  public KeepAliveImpl(@Assisted("sendingPeer") Peer sendingPeer,
+      @Assisted("receivingPeer") Peer receivingPeer) {
+    super(sendingPeer, receivingPeer, PeerMessage.Type.KEEP_ALIVE);
   }
 }

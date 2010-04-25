@@ -24,9 +24,12 @@ public class RequestImpl extends PeerMessage<Request> implements Request {
    * @param length
    */
   @Inject
-  public RequestImpl(@Assisted Peer peer, @Assisted("pieceIndex") int index,
-      @Assisted("beginningOffset") int begin, @Assisted("blockLength") int length) {
-    super(peer, PeerMessage.Type.REQUEST);
+  public RequestImpl(@Assisted("sendingPeer") Peer sendingPeer,
+      @Assisted("receivingPeer") Peer receivingPeer,
+      @Assisted("pieceIndex") int index,
+      @Assisted("beginningOffset") int begin,
+      @Assisted("blockLength") int length) {
+    super(sendingPeer, receivingPeer, PeerMessage.Type.REQUEST);
     this.index = index;
     this.begin = begin;
     this.length = length;

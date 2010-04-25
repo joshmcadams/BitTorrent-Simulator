@@ -49,6 +49,12 @@ public class PeerBrainsImpl implements PeerBrains {
   private static final Integer UNCHOKED_PEER_LIMIT = 100;
   private final Injector injector;
 
+  private void debug(Object... objects) {
+    String formatString = (String) objects[0];
+    System.arraycopy(objects, 1, objects, 0, objects.length - 1);
+    logger.debug(String.format(formatString, objects));
+  }
+
   public PeerBrainsImpl() {
     this.injector = Guice.createInjector(new MessagesModule());
   }
@@ -226,12 +232,10 @@ public class PeerBrainsImpl implements PeerBrains {
       localSentHandshakeAt = state.whenDidLocalSendHandshake();
     }
     if (localSentHandshakeAt == null) {
-      logger.info(String.format(
-          "Queueing local peer %s to send handshake to remote peer %s",
-          new String(localPeer.getId()), new String(remotePeer.getId())));
+      debug("[action: handshake][local: %s][remote: %s]", localPeer, remotePeer);
 
       messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-          HandshakeFactory.class).create(localPeer,
+          HandshakeFactory.class).create(localPeer, remotePeer,
           HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
           HandshakeImpl.DEFAULT_RESERVED_BYTES)));
 
@@ -257,17 +261,11 @@ public class PeerBrainsImpl implements PeerBrains {
     }
 
     if (remoteSentHandshakeAt == null) {
-      logger.info(String.format(
-          "Local peer %s has not received handshake from remote peer %s",
-          new String(localPeer.getId()), new String(remotePeer.getId())));
-
       // shake again just to be sure that the remote got ours
-      logger.info(String.format(
-          "Queueing local peer %s to send handshake to remote peer %s",
-          new String(localPeer.getId()), new String(remotePeer.getId())));
+      debug("[action: handshake][local: %s][remote: %s]", localPeer, remotePeer);
 
       messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-          HandshakeFactory.class).create(localPeer,
+          HandshakeFactory.class).create(localPeer, remotePeer,
           HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
           HandshakeImpl.DEFAULT_RESERVED_BYTES)));
 
@@ -293,12 +291,10 @@ public class PeerBrainsImpl implements PeerBrains {
     }
 
     if (choked == null) {
-      logger.info(String.format(
-          "Queueing local peer %s to send choke to remote peer %s", new String(
-              localPeer.getId()), new String(remotePeer.getId())));
+      debug("[action: choke][local: %s][remote: %s]", localPeer, remotePeer);
 
       messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-          ChokeFactory.class).create(localPeer)));
+          ChokeFactory.class).create(localPeer, remotePeer)));
 
       return true;
     }
@@ -348,7 +344,7 @@ public class PeerBrainsImpl implements PeerBrains {
       if (!declared) {
         pieceDeclared = true;
         messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-            HaveFactory.class).create(localPeer, pieceIndex)));
+            HaveFactory.class).create(localPeer, remotePeer, pieceIndex)));
       }
     }
 
@@ -393,14 +389,15 @@ public class PeerBrainsImpl implements PeerBrains {
       for (PieceDeclaration pieceDeclaration : remotePieces) {
         if (!downloadedPieces.contains(pieceDeclaration.getPieceIndex())) {
           messages.add(new Pair<Peer, Message>(remotePeer, injector
-              .getInstance(InterestedFactory.class).create(localPeer)));
+              .getInstance(InterestedFactory.class).create(localPeer,
+                  remotePeer)));
           return true;
         }
       }
     }
 
     messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-        NotInterestedFactory.class).create(localPeer)));
+        NotInterestedFactory.class).create(localPeer, remotePeer)));
 
     return true;
   }
@@ -452,10 +449,9 @@ public class PeerBrainsImpl implements PeerBrains {
       }
     }
 
-    logger.info(String.format("Unchoked peer count is %d", unchokedPeerCount));
     if (unchokedPeerCount < UNCHOKED_PEER_LIMIT) {
       messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-          UnchokeFactory.class).create(localPeer)));
+          UnchokeFactory.class).create(localPeer, remotePeer)));
     }
 
     return true;
@@ -492,20 +488,9 @@ public class PeerBrainsImpl implements PeerBrains {
       downloadedPieces = data.keySet();
     }
 
-    logger.info(String.format("Remote piece count for remote peer %s is %d",
-        new String(remotePeer.getId()), remotePieces.size()));
-
     ImmutableList<PieceRequest> alreadyRequestedPieces = null;
     synchronized (state) {
       alreadyRequestedPieces = state.getLocalRequestedPieces();
-    }
-
-    logger.info(String.format("%s has downloaded %d pieces", new String(
-        localPeer.getId()), downloadedPieces.size()));
-
-    for (Integer i : downloadedPieces) {
-      logger.info(String.format("%s has downloaded piece %d", new String(
-          localPeer.getId()), i));
     }
 
     for (PieceDeclaration piece : remotePieces) {
@@ -524,14 +509,11 @@ public class PeerBrainsImpl implements PeerBrains {
 
         if (okayToRequest) {
           messages.add(new Pair<Peer, Message>(remotePeer, injector
-              .getInstance(RequestFactory.class).create(localPeer,
+              .getInstance(RequestFactory.class).create(localPeer, remotePeer,
                   piece.getPieceIndex(), 0, metainfo.getPieceLength())));
         }
 
         return true;
-      } else {
-        logger.info(String.format("Peer %s already has piece %d", new String(
-            localPeer.getId()), piece.getPieceIndex()));
       }
     }
 
@@ -557,11 +539,6 @@ public class PeerBrainsImpl implements PeerBrains {
       requestedPieces = state.getRemoteRequestedPieces();
     }
 
-    logger.info(String.format(
-        "Remote peer %s has requested %d pieces from local peer %s",
-        new String(remotePeer.getId()), requestedPieces.size(), new String(
-            localPeer.getId())));
-
     if (requestedPieces == null || requestedPieces.size() == 0) {
       return false;
     }
@@ -570,21 +547,9 @@ public class PeerBrainsImpl implements PeerBrains {
       return false; // remote is choked
     }
 
-    for (PieceRequest request : requestedPieces) {
-      logger.info(String.format(
-          "Remote peer %s has requested piece %s of local peer %s", new String(
-              remotePeer.getId()), request, new String(localPeer.getId())));
-    }
-
     byte[] bytes = null;
     int requestedIndex = requestedPieces.get(0).getPieceIndex();
     int requestedOffset = requestedPieces.get(0).getBlockOffset();
-
-    logger
-        .info(String.format(
-            "Local peer %s is pulling piece %d for remote peer %s", new String(
-                localPeer.getId()), requestedIndex, new String(remotePeer
-                .getId())));
 
     synchronized (data) {
       if (data.containsKey(requestedIndex)) {
@@ -593,23 +558,17 @@ public class PeerBrainsImpl implements PeerBrains {
     }
 
     if (bytes == null) {
-      logger.info(String.format(
-          "Local peer %s could not find data for piece %d for remote peer %s",
-          new String(localPeer.getId()), requestedIndex, new String(remotePeer
-              .getId())));
       return false;
     }
 
     // TODO: make the bytes match the requested size
 
-    logger.info(String.format(
-        "Local peer %s is sending data for piece %d for remote peer %s",
-        new String(localPeer.getId()), requestedIndex, new String(remotePeer
-            .getId())));
+    debug("[action: piece][index: %d][local:%s][remote %s]", requestedIndex,
+        localPeer, remotePeer);
 
     messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-        PieceFactory.class).create(localPeer, requestedIndex, requestedOffset,
-        bytes)));
+        PieceFactory.class).create(localPeer, remotePeer, requestedIndex,
+        requestedOffset, bytes)));
 
     return true;
   }
@@ -639,8 +598,9 @@ public class PeerBrainsImpl implements PeerBrains {
     for (PieceRequest request : requestedPieces) {
       if (downloadedPieces.contains(request.getPieceIndex())) {
         messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-            CancelFactory.class).create(localPeer, request.getPieceIndex(),
-            request.getBlockOffset(), request.getBlockSize())));
+            CancelFactory.class).create(localPeer, remotePeer,
+            request.getPieceIndex(), request.getBlockOffset(),
+            request.getBlockSize())));
       }
     }
 
@@ -658,7 +618,7 @@ public class PeerBrainsImpl implements PeerBrains {
   private boolean sendKeepAlive(Peer remotePeer, PeerState state,
       List<Pair<Peer, Message>> messages) {
     messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-        KeepAliveFactory.class).create(localPeer)));
+        KeepAliveFactory.class).create(localPeer, remotePeer)));
     return true;
   }
 }

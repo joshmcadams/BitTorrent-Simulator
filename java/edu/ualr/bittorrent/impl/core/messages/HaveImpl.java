@@ -20,8 +20,9 @@ public class HaveImpl extends PeerMessage<Have> implements Have {
    * @param pieceIndex
    */
   @Inject
-  public HaveImpl(@Assisted Peer peer, @Assisted int pieceIndex) {
-    super(peer, PeerMessage.Type.HAVE);
+  public HaveImpl(@Assisted("sendingPeer") Peer sendingPeer,
+      @Assisted("receivingPeer") Peer receivingPeer, @Assisted int pieceIndex) {
+    super(sendingPeer, receivingPeer, PeerMessage.Type.HAVE);
     this.pieceIndex = pieceIndex;
   }
 

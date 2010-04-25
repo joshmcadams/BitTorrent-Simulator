@@ -1,6 +1,7 @@
 package edu.ualr.bittorrent.interfaces.messages;
 
-import edu.ualr.bittorrent.interfaces.HasPeer;
+import edu.ualr.bittorrent.interfaces.HasReceivingPeer;
+import edu.ualr.bittorrent.interfaces.HasSendingPeer;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Peer;
 
@@ -13,6 +14,6 @@ import edu.ualr.bittorrent.interfaces.Peer;
  * Objects that will represent {@link NotInterested} messages should implement
  * this interface.
  */
-public interface NotInterested extends HasPeer, Message {
+public interface NotInterested extends HasSendingPeer, HasReceivingPeer, Message {
 
 }

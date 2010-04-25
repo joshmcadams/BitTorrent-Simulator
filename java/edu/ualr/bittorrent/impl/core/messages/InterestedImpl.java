@@ -18,7 +18,8 @@ public class InterestedImpl extends PeerMessage<Interested> implements
    * @param peer
    */
   @Inject
-  public InterestedImpl(@Assisted Peer peer) {
-    super(peer, PeerMessage.Type.INTERESTED);
+  public InterestedImpl(@Assisted("sendingPeer") Peer sendingPeer,
+      @Assisted("receivingPeer") Peer receivingPeer) {
+    super(sendingPeer, receivingPeer, PeerMessage.Type.INTERESTED);
   }
 }

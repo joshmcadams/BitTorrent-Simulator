@@ -1,6 +1,7 @@
 package edu.ualr.bittorrent.interfaces.messages;
 
-import edu.ualr.bittorrent.interfaces.HasPeer;
+import edu.ualr.bittorrent.interfaces.HasReceivingPeer;
+import edu.ualr.bittorrent.interfaces.HasSendingPeer;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Peer;
 
@@ -12,7 +13,7 @@ import edu.ualr.bittorrent.interfaces.Peer;
  * Objects that will represent a {@link BitField} should implement this
  * interface.
  */
-public interface BitField extends HasPeer, Message {
+public interface BitField extends HasSendingPeer, HasReceivingPeer, Message {
   /**
    * Return an array of bytes, where each bit in the list represents a piece of
    * data in the torrent. If the bit is 'on', the {@link Peer} who sent the

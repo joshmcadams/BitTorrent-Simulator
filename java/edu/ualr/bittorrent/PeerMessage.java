@@ -3,6 +3,8 @@ package edu.ualr.bittorrent;
 import com.google.common.base.Preconditions;
 
 import edu.ualr.bittorrent.interfaces.HasPeer;
+import edu.ualr.bittorrent.interfaces.HasReceivingPeer;
+import edu.ualr.bittorrent.interfaces.HasSendingPeer;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Peer;
 
@@ -16,8 +18,9 @@ import edu.ualr.bittorrent.interfaces.Peer;
  * @param <T>
  *          The type of message.
  */
-public class PeerMessage<T> implements HasPeer, Message {
-  private final Peer peer;
+public class PeerMessage<T> implements HasSendingPeer, HasReceivingPeer, Message {
+  private final Peer sendingPeer;
+  private final Peer receivingPeer;
   private final Type type;
 
   /**
@@ -28,16 +31,24 @@ public class PeerMessage<T> implements HasPeer, Message {
    * @param type
    *          The {@link Type} of message being sent.
    */
-  public PeerMessage(Peer peer, Type type) {
-    this.peer = Preconditions.checkNotNull(peer);
+  public PeerMessage(Peer sendingPeer, Peer receivingPeer, Type type) {
+    this.sendingPeer = Preconditions.checkNotNull(sendingPeer);
+    this.receivingPeer = Preconditions.checkNotNull(receivingPeer);
     this.type = Preconditions.checkNotNull(type);
   }
 
   /**
    * {@inheritDoc}
    */
-  public Peer getPeer() {
-    return peer;
+  public Peer getSendingPeer() {
+    return sendingPeer;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public Peer getReceivingPeer() {
+    return receivingPeer;
   }
 
   /**

@@ -1,6 +1,7 @@
 package edu.ualr.bittorrent.interfaces.messages;
 
-import edu.ualr.bittorrent.interfaces.HasPeer;
+import edu.ualr.bittorrent.interfaces.HasReceivingPeer;
+import edu.ualr.bittorrent.interfaces.HasSendingPeer;
 import edu.ualr.bittorrent.interfaces.Message;
 import edu.ualr.bittorrent.interfaces.Peer;
 
@@ -11,7 +12,7 @@ import edu.ualr.bittorrent.interfaces.Peer;
  * Objects that wish to serve as {@link Port} messages should implement this
  * interface.
  */
-public interface Port extends HasPeer, Message {
+public interface Port extends HasSendingPeer, HasReceivingPeer, Message {
   /**
    * Return the desired port of communication.
    *
