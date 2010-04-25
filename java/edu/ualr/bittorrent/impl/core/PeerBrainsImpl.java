@@ -126,10 +126,11 @@ public class PeerBrainsImpl implements PeerBrains {
      * Let peers that are choking and that have pieces that we want know that
      * we are interested
      */
-    expressInterest(p, state, messages);
-
-    /* request pieces from peers */
-    makeRequests(p, state, messages);
+    if (expressInterest(p, state, messages)) {
+      return true;
+    } else if (makeRequests(p, state, messages)) {
+      return true;
+    }
 
     return false;
   }
@@ -137,15 +138,25 @@ public class PeerBrainsImpl implements PeerBrains {
   private boolean respondToPeerRequests(Peer p, PeerState state,
       List<Pair<Peer, Message>> messages) {
     /* Unchoke some peers if there are any that seem worthy */
-    unchoke(p, state, messages);
-
-    sendPieces(p, state, messages);
-
-    cancelPieceRequests(p, state, messages);
+    if (unchoke(p, state, messages)) {
+      return true;
+    } else if(sendPieces(p, state, messages) || cancelPieceRequests(p, state, messages)) {
+      return true;
+    }
 
     return false;
   }
 
+  /**
+   * After communication between peers is initialized, they can actually start sending meaningful
+   * messages back-and-fourth. This method sees if any messages need to be sent, and if so, returns
+   * true. Otherwise, it returns false.
+   *
+   * @param p
+   * @param state
+   * @param messages
+   * @return
+   */
   private boolean sendMeaningfuleMessageToPeer(Peer p, PeerState state,
       List<Pair<Peer, Message>> messages) {
     boolean messageSent = false;
@@ -345,7 +356,9 @@ public class PeerBrainsImpl implements PeerBrains {
   /**
    * If a neighbor has a piece that we are interested in and if we are choked,
    * then we should let the neighbor know that we'd like to request a piece of
-   * data from it, hoping that we will soon be unchoked.
+   * data from it, hoping that we will soon be unchoked. If the we are choked
+   * and our neighbor isn't interesting, let the know. Otherwise, don't send
+   * any messages about our interest.
    *
    * @param remotePeer
    * @param state
@@ -387,7 +400,7 @@ public class PeerBrainsImpl implements PeerBrains {
     messages.add(new Pair<Peer, Message>(remotePeer,
         injector.getInstance(NotInterestedFactory.class).create(localPeer)));
 
-    return false;
+    return true;
   }
 
   /**
@@ -429,6 +442,7 @@ public class PeerBrainsImpl implements PeerBrains {
       synchronized (activePeers) {
         peerState = activePeers.get(peer);
       }
+      //TODO: add some element of optimistic unchoking here... now this is too optimistic
       if (peerState.isRemoteChoked() != null
           && ChokeStatus.UNCHOKED.equals(peerState.isRemoteChoked().fst)) {
         unchokedPeerCount++;
@@ -454,6 +468,7 @@ public class PeerBrainsImpl implements PeerBrains {
    */
   private boolean makeRequests(Peer remotePeer, PeerState state,
       List<Pair<Peer, Message>> messages) {
+    //TODO: be more intelligent about requests (by intelligent, i really be true to spec)
 
     Pair<ChokeStatus, Instant> choked = null;
     List<PieceDeclaration> remotePieces = null;
