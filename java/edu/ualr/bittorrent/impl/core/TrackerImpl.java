@@ -169,12 +169,16 @@ public class TrackerImpl implements Tracker {
       }
 
       while (peerMap.size() < PEER_REQUEST_LIMIT) {
-        Peer peer;
+        Peer peer = null;
         if (Math.random() < SEED_PROBABILITY && seederKeys.size() > 0) {
           peer = seederKeys
               .get((int) (Math.random() * (seederKeys.size() - 1)));
-        } else {
+        } else if (leechKeys.size() > 0) {
           peer = leechKeys.get((int) (Math.random() * (leechKeys.size() - 1)));
+        }
+
+        if (peer == null) {
+          break;
         }
 
         if (!peer.equals(request.getPeer())) {
@@ -182,7 +186,6 @@ public class TrackerImpl implements Tracker {
         }
       }
 
-      debug("Returning a list of %d peers", peerMap.keySet().size());
       return ImmutableList.copyOf(peerMap.keySet());
     }
 

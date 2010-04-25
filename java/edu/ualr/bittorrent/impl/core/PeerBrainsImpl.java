@@ -252,11 +252,11 @@ public class PeerBrainsImpl implements PeerBrains {
 
     if (remoteSentHandshakeAt == null) {
       // shake again just to be sure that the remote got ours
-      messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
+/*      messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
           HandshakeFactory.class).create(localPeer, remotePeer,
           HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
           HandshakeImpl.DEFAULT_RESERVED_BYTES)));
-
+*/
       return false;
     }
     return true;
