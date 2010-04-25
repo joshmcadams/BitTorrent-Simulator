@@ -536,6 +536,7 @@ public class PeerBrainsImpl implements PeerBrains {
     byte[] bytes = null;
     int requestedIndex = requestedPieces.get(0).getPieceIndex();
     int requestedOffset = requestedPieces.get(0).getBlockOffset();
+    int requestedSize = requestedPieces.get(0).getBlockSize();
 
     synchronized (data) {
       if (data.containsKey(requestedIndex)) {
@@ -547,7 +548,16 @@ public class PeerBrainsImpl implements PeerBrains {
       return false;
     }
 
-    // TODO: make the bytes match the requested size
+    if (requestedOffset > 0) {
+      if (requestedOffset + requestedSize <= bytes.length) {
+        byte[] newBytes = new byte[requestedSize];
+        System.arraycopy(bytes, requestedOffset, newBytes, 0, requestedSize);
+        bytes = newBytes;
+      } else {
+        return false;
+      }
+    }
+
     messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
         PieceFactory.class).create(localPeer, remotePeer, requestedIndex,
         requestedOffset, bytes)));

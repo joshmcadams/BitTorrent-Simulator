@@ -1,5 +1,7 @@
 package edu.ualr.bittorrent;
 
+import org.joda.time.Instant;
+
 import com.google.common.base.Preconditions;
 
 import edu.ualr.bittorrent.interfaces.HasPeer;
@@ -22,6 +24,7 @@ public class PeerMessage<T> implements HasSendingPeer, HasReceivingPeer, Message
   private final Peer sendingPeer;
   private final Peer receivingPeer;
   private final Type type;
+  private final Instant sentTime;
 
   /**
    * Create a new {@link PeerMessage}.
@@ -32,9 +35,14 @@ public class PeerMessage<T> implements HasSendingPeer, HasReceivingPeer, Message
    *          The {@link Type} of message being sent.
    */
   public PeerMessage(Peer sendingPeer, Peer receivingPeer, Type type) {
+    this(sendingPeer, receivingPeer, type, new Instant());
+  }
+
+  public PeerMessage(Peer sendingPeer, Peer receivingPeer, Type type, Instant sentTime) {
     this.sendingPeer = Preconditions.checkNotNull(sendingPeer);
     this.receivingPeer = Preconditions.checkNotNull(receivingPeer);
     this.type = Preconditions.checkNotNull(type);
+    this.sentTime = Preconditions.checkNotNull(sentTime);
   }
 
   /**
@@ -56,5 +64,9 @@ public class PeerMessage<T> implements HasSendingPeer, HasReceivingPeer, Message
    */
   public Type getType() {
     return type;
+  }
+
+  public Instant getSentTime() {
+    return sentTime;
   }
 }

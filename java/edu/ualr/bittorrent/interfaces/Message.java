@@ -1,5 +1,7 @@
 package edu.ualr.bittorrent.interfaces;
 
+import org.joda.time.Instant;
+
 import edu.ualr.bittorrent.interfaces.messages.BitField;
 import edu.ualr.bittorrent.interfaces.messages.Cancel;
 import edu.ualr.bittorrent.interfaces.messages.Choke;
@@ -42,4 +44,11 @@ public interface Message extends HasSendingPeer, HasReceivingPeer {
    * @return
    */
   public Type getType();
+
+  /**
+   * Return the {@link Instant} that the message was sent.
+   *
+   * @return
+   */
+  public Instant getSentTime();
 }

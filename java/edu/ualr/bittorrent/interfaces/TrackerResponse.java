@@ -27,19 +27,15 @@ public interface TrackerResponse {
 
   /**
    * The {@link Tracker} should let the {@link Peer} know how often to contact
-   * the {@link Tracker}. This method returns that interval in XXX.
-   *
-   * TODO: what are the units of the interval.
+   * the {@link Tracker}. This method returns that interval in seconds.
    *
    * @return
    */
   public int getInterval();
 
   /**
-   * The minimum interval that a {@link Peer} should wait in between requests to
-   * the {@link Tracker}.
-   *
-   * TODO: what are the units of the interval
+   * The minimum interval (in seconds) that a {@link Peer} should wait in
+   * between requests to the {@link Tracker}.
    *
    * @return
    */

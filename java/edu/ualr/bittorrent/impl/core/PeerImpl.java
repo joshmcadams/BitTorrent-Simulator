@@ -415,8 +415,7 @@ public class PeerImpl implements Peer {
     download.setPieceIndex(piece.getPieceIndex());
     download.setBlockOffset(piece.getBeginningOffset());
     download.setBlockSize(piece.getBlock().length);
-    download.setStartTime(new Instant()); // TODO: pull the original number from
-    // Message
+    download.setStartTime(piece.getSentTime());
     download.setCompletionTime(new Instant());
 
     synchronized (state) {
@@ -546,7 +545,7 @@ public class PeerImpl implements Peer {
           }
         }
         try {
-          Thread.sleep(response.getInterval());
+          Thread.sleep(response.getInterval() * 1000);
         } catch (InterruptedException e) {
           throw new RuntimeException(e);
         }
