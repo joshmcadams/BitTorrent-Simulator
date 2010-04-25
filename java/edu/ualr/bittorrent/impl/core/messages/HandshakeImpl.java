@@ -1,5 +1,7 @@
 package edu.ualr.bittorrent.impl.core.messages;
 
+import org.apache.log4j.Logger;
+
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
@@ -21,6 +23,7 @@ public class HandshakeImpl extends PeerMessage<Handshake> implements Handshake {
   public static final String DEFAULT_PROTOCOL_IDENTIFIER = "BitTorrent protocol";
   public static final byte[] DEFAULT_RESERVED_BYTES = { 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00 };
+  private static final Logger logger = Logger.getLogger(HandshakeImpl.class);
 
   /**
    * Create a new handshake message.
@@ -51,6 +54,8 @@ public class HandshakeImpl extends PeerMessage<Handshake> implements Handshake {
     this.infoHash = Preconditions.checkNotNull(infoHash);
     this.protocolIdentifier = Preconditions.checkNotNull(protocolIdentifier);
     this.reservedBytes = Preconditions.checkNotNull(reservedBytes);
+    logger.debug(String.format("[message: %s][from: %s][to: %s]",
+        PeerMessage.Type.HANDSHAKE, sendingPeer, receivingPeer));
   }
 
   /**

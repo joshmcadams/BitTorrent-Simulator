@@ -1,5 +1,7 @@
 package edu.ualr.bittorrent.impl.core.messages;
 
+import org.apache.log4j.Logger;
+
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 
@@ -12,6 +14,8 @@ import edu.ualr.bittorrent.interfaces.messages.NotInterested;
  */
 public class NotInterestedImpl extends PeerMessage<NotInterested> implements
     NotInterested {
+  private static final Logger logger = Logger.getLogger(NotInterestedImpl.class);
+
   /**
    * Create a new not interested message.
    *
@@ -21,5 +25,7 @@ public class NotInterestedImpl extends PeerMessage<NotInterested> implements
   public NotInterestedImpl(@Assisted("sendingPeer") Peer sendingPeer,
       @Assisted("receivingPeer") Peer receivingPeer) {
     super(sendingPeer, receivingPeer, PeerMessage.Type.NOT_INTERESTED);
+    logger.debug(String.format("[message: %s][from: %s][to: %s]",
+        PeerMessage.Type.NOT_INTERESTED, sendingPeer, receivingPeer));
   }
 }

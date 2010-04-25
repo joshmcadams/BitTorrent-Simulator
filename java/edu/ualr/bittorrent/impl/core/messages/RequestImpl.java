@@ -1,5 +1,7 @@
 package edu.ualr.bittorrent.impl.core.messages;
 
+import org.apache.log4j.Logger;
+
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 
@@ -14,6 +16,7 @@ public class RequestImpl extends PeerMessage<Request> implements Request {
   private final int index;
   private final int begin;
   private final int length;
+  private static final Logger logger = Logger.getLogger(RequestImpl.class);
 
   /**
    * Create a new request message.
@@ -33,6 +36,8 @@ public class RequestImpl extends PeerMessage<Request> implements Request {
     this.index = index;
     this.begin = begin;
     this.length = length;
+    logger.debug(String.format("[message: %s][from: %s][to: %s][piece: %d]",
+        PeerMessage.Type.REQUEST, sendingPeer, receivingPeer, index));
   }
 
   /**

@@ -28,6 +28,8 @@ public class BitFieldImpl extends PeerMessage<BitField> implements BitField {
       @Assisted("receivingPeer") Peer receivingPeer, @Assisted byte[] bitfield) {
     super(sendingPeer, receivingPeer, PeerMessage.Type.BIT_FIELD);
     this.bitfield = Preconditions.checkNotNull(bitfield);
+    logger.debug(String.format("[message: %s][from: %s][to: %s]",
+        PeerMessage.Type.BIT_FIELD, sendingPeer, receivingPeer));
   }
 
   /**
