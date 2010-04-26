@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.joda.time.Instant;
@@ -61,61 +60,67 @@ import edu.ualr.bittorrent.interfaces.messages.UnchokeFactory;
  * Default peer implementation.
  */
 public class PeerImpl implements Peer {
-  /*
+  /**
    * Tracker that we will be using to learn about other peers and that we will
    * be reporting our status to
    */
   private Tracker tracker;
 
-  /* Unique ID of this peer */
+  /**
+   * Unique ID of this peer
+   */
   private final byte[] id;
 
-  /*
+  /**
    * Metainfo that we are using to navigate this swarm
    */
   private Metainfo metainfo;
 
-  /*
+  /**
    * Messages that have been sent to this peer that are pending processing
    */
   private final List<Message> inboundMessageQueue = Lists.newArrayList();
 
-  /*
+  /**
    * Number of bytes that this peer has downloaded
    */
   private final AtomicInteger bytesDownloaded = new AtomicInteger();
 
-  /* Number of bytes that this peer has uploaded */
+  /**
+   * Number of bytes that this peer has uploaded
+   */
   private final AtomicInteger bytesUploaded = new AtomicInteger();
 
-  /*
+  /**
    * Number of bytes that this peer still needs to download
    */
   private final AtomicInteger bytesRemaining = new AtomicInteger();
 
-  /*
+  /**
    * Map of active peers and the state of those peers
    */
   private final Map<Peer, PeerState> activePeers = new ConcurrentHashMap<Peer, PeerState>();
 
-  /*
+  /**
    * The data that is being downloaded
    */
   private final Map<Integer, byte[]> data;
 
-  /*
+  /**
    * Injector used to create messages
    */
   private final Injector injector;
 
-  /*
+  /**
    * Arbitrarily chosen limit on the number of peers that will be unchoked at
    * any gieven time
    */
   private static final Integer UNCHOKED_PEER_LIMIT = 100;
 
-  private Instant lastCommunicationWithTracker;
-  private Integer trackerCommunicationInterval;
+  /**
+   * The next time that this peer can communicate with the tracker
+   */
+  private Instant nextCommunicationWithTracker;
 
   /**
    * Create a new PeerImpl object, providing a unique ID and some initial data
@@ -206,6 +211,9 @@ public class PeerImpl implements Peer {
     return new String(id);
   }
 
+  /**
+   * Announce to the tracker, receiving a list of peers to communicate with.
+   */
   private void announce() {
     synchronized (bytesRemaining) {
       bytesRemaining.set(howMuchIsLeftToDownload());
@@ -222,21 +230,14 @@ public class PeerImpl implements Peer {
       }
     }
 
-    lastCommunicationWithTracker = new Instant();
-    trackerCommunicationInterval = response.getInterval() * 1000;
+    nextCommunicationWithTracker = new Instant()
+        .plus(response.getInterval() * 1000); // seconds to millis
   }
 
   /**
-   * The PeerImpl is intended to run as a thread of a higher-level
-   * {@link ExecutorService}. The peer itself creates a new
-   * {@link ExecutorService} that it uses to spawn threads for parallel
-   * communication with the tracker and with other peers in the swarm.
-   *
-   * This thread loops infinitely, pulling messages off of a message queue. The
-   * message queue is populated with messages received from other peers in the
-   * swarm. The messages are processed in the sense that they are used to
-   * populate a state object. This object is used by the {@link PeerBrains} to
-   * make decisions about how this peer should act.
+   * Primary driver for the {@link Peer}. This thread runs continually,
+   * announcing to the {@link Tracker} at regular intervals, and sending and
+   * receiving {@link Message}s with other {@link Peer}s in the swarm.
    */
   public void run() {
     Preconditions.checkNotNull(tracker);
@@ -248,8 +249,7 @@ public class PeerImpl implements Peer {
 
     while (true) {
       /* subsequent tracker announcements */
-      if (new Instant().isAfter(lastCommunicationWithTracker
-          .plus(trackerCommunicationInterval))) {
+      if (new Instant().isAfter(nextCommunicationWithTracker)) {
         announce();
       }
 
@@ -928,76 +928,76 @@ public class PeerImpl implements Peer {
     Preconditions.checkNotNull(data);
 
     /*
-    *
-    * List<Pair<Peer, Message>> messages = Lists.newArrayList();
-    *
-    * BitField messages will not be processed in this experiment. Port messages
-    * will not be processed in this experiment.
-    *
-    * Handshake Any peer that I have not sent a handshake too will be sent a
-    * handshake.
-    *
-    * Any peer that I have sent a handshake too, but who has not shaken back
-    * over the last x period of time will receive another handshake. After n
-    * attempts, the peer will be ignored.
-    *
-    * If a receive a handshake, i will accept it. If i recieve repeated
-    * handshakes, I will respond with my own handshake.
-    *
-    * Choke Any peer that I have shaken hands with, but have not choked will be
-    * choked.
-    *
-    * Periodically, I will choke peers that I feel are currently unworthy.
-    *
-    * Have All peers should get an updated have list from me.
-    *
-    * Cancel After I receive a piece from a peer, I will tell other peers that
-    * are sending that piece that I no longer need it.
-    *
-    * Interested If a peer sends an interested message and it choked, I will
-    * consider unchoking them.
-    *
-    * If I am choked by a peer, but would like to get data from them, I will
-    * express interest.
-    *
-    * Not Interested If I am choked by a peer, I will let that peer know that I
-    * don't care if I'm unchoked by expressing a lack of interest.
-    *
-    * If a peer expresses disinterest in me, I will choke that peer if they are
-    * unchoked.
-    *
-    * Piece If an unchoked peer makes a request to me, I will do my best to
-    * honor that request.
-    *
-    * Request If I am unchoked and a peer has data that I need, I will request
-    * it from that peer. If the peer does not respond in a reasonable amount of
-    * time, I will request the data from another peer.
-    *
-    * Unchoke If a peer is choked and has expressed interest and if I have a
-    * slot open, I will unchoke the peer for a limited period of time to give
-    * them a chance to request data from me.
-    *
-    * KeepAlive If I have no other message to send a peer, I will send it a
-    * keep alive. Set<Peer> peers;
-    *
-    * synchronized (activePeers) { peers = activePeers.keySet(); }
-    *
-    * for (Peer p : peers) { messages.addAll(makePeerLevelDecisions());
-    * PeerState state = returnStateIfAvailable(p); if (state == null) {
-    * continue; }
-    *
-    * if (handleCommunicationInitalization(p, state, messages)) { continue; }
-    *
-    * Let the remote peer know about any new pieces that we might have if
-    * (letPeerKnowAboutNewPieces(p, state, messages)) { continue; }
-    *
-    * if (sendMeaningfuleMessageToPeer(p, state, messages)) { continue; }
-    *
-    * If no other messages are necessary, just send a keep alive
-    * sendKeepAlive(p, state, messages); }
-    *
-    * return messages;
-    */
+     *
+     * List<Pair<Peer, Message>> messages = Lists.newArrayList();
+     *
+     * BitField messages will not be processed in this experiment. Port messages
+     * will not be processed in this experiment.
+     *
+     * Handshake Any peer that I have not sent a handshake too will be sent a
+     * handshake.
+     *
+     * Any peer that I have sent a handshake too, but who has not shaken back
+     * over the last x period of time will receive another handshake. After n
+     * attempts, the peer will be ignored.
+     *
+     * If a receive a handshake, i will accept it. If i recieve repeated
+     * handshakes, I will respond with my own handshake.
+     *
+     * Choke Any peer that I have shaken hands with, but have not choked will be
+     * choked.
+     *
+     * Periodically, I will choke peers that I feel are currently unworthy.
+     *
+     * Have All peers should get an updated have list from me.
+     *
+     * Cancel After I receive a piece from a peer, I will tell other peers that
+     * are sending that piece that I no longer need it.
+     *
+     * Interested If a peer sends an interested message and it choked, I will
+     * consider unchoking them.
+     *
+     * If I am choked by a peer, but would like to get data from them, I will
+     * express interest.
+     *
+     * Not Interested If I am choked by a peer, I will let that peer know that I
+     * don't care if I'm unchoked by expressing a lack of interest.
+     *
+     * If a peer expresses disinterest in me, I will choke that peer if they are
+     * unchoked.
+     *
+     * Piece If an unchoked peer makes a request to me, I will do my best to
+     * honor that request.
+     *
+     * Request If I am unchoked and a peer has data that I need, I will request
+     * it from that peer. If the peer does not respond in a reasonable amount of
+     * time, I will request the data from another peer.
+     *
+     * Unchoke If a peer is choked and has expressed interest and if I have a
+     * slot open, I will unchoke the peer for a limited period of time to give
+     * them a chance to request data from me.
+     *
+     * KeepAlive If I have no other message to send a peer, I will send it a
+     * keep alive. Set<Peer> peers;
+     *
+     * synchronized (activePeers) { peers = activePeers.keySet(); }
+     *
+     * for (Peer p : peers) { messages.addAll(makePeerLevelDecisions());
+     * PeerState state = returnStateIfAvailable(p); if (state == null) {
+     * continue; }
+     *
+     * if (handleCommunicationInitalization(p, state, messages)) { continue; }
+     *
+     * Let the remote peer know about any new pieces that we might have if
+     * (letPeerKnowAboutNewPieces(p, state, messages)) { continue; }
+     *
+     * if (sendMeaningfuleMessageToPeer(p, state, messages)) { continue; }
+     *
+     * If no other messages are necessary, just send a keep alive
+     * sendKeepAlive(p, state, messages); }
+     *
+     * return messages;
+     */
 
     return null;
   }
@@ -1010,8 +1010,6 @@ public class PeerImpl implements Peer {
 
     return null;
   }
-
-
 
   /**
    * Determine if a handshake message should be sent and if so, add it to the
