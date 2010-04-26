@@ -418,46 +418,6 @@ public class PeerImpl implements Peer {
    */
 
   /**
-   * Dispatch a message to a peer.
-   *
-   * @param remotePeer
-   * @param message
-   */
-  private void sendMessage(Peer remotePeer, Message message) {
-    if (message instanceof BitField) {
-      sendBitFieldMessage(remotePeer, (BitField) message);
-    } else if (message instanceof Cancel) {
-      sendCancelMessage(remotePeer, (Cancel) message);
-    } else if (message instanceof Choke) {
-      sendChokeMessage(remotePeer, (Choke) message);
-    } else if (message instanceof Port) {
-      sendPortMessage(remotePeer, (Port) message);
-    } else if (message instanceof Request) {
-      sendRequestMessage(remotePeer, (Request) message);
-    } else if (message instanceof Handshake) {
-      sendHandshakeMessage(remotePeer, (Handshake) message);
-    } else if (message instanceof Have) {
-      sendHaveMessage(remotePeer, (Have) message);
-    } else if (message instanceof Interested) {
-      sendInterestedMessage(remotePeer, (Interested) message);
-    } else if (message instanceof KeepAlive) {
-      sendKeepAliveMessage(remotePeer, (KeepAlive) message);
-    } else if (message instanceof NotInterested) {
-      sendNotInterestedMessage(remotePeer, (NotInterested) message);
-    } else if (message instanceof Piece) {
-      sendPieceMessage(remotePeer, (Piece) message);
-    } else if (message instanceof Unchoke) {
-      sendUnchokeMessage(remotePeer, (Unchoke) message);
-    } else {
-      throw new IllegalArgumentException(
-          String
-              .format(
-                  "Local client %s attempting to send an unsupported message of type %s",
-                  new String(getId()), message.getType()));
-    }
-  }
-
-  /**
    * Messages are received as somewhat generic {@link PeerMessage} objects. This
    * method determines the type of {@link PeerMessage} and dispatches the
    * message to the appropriate handler.
