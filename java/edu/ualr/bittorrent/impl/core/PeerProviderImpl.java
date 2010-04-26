@@ -41,12 +41,12 @@ public class PeerProviderImpl implements PeerProvider {
     }
     alreadyCalled = true;
     List<Peer> peers = Lists.newArrayList();
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 2; i++) {
       Peer peer = new PeerImpl(pieces);
       peer.setMetainfo(metainfo);
       peers.add(peer);
     }
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 2; i++) {
       Peer peer = new PeerImpl();
       peer.setMetainfo(metainfo);
       peers.add(peer);

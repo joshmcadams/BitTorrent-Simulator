@@ -156,9 +156,16 @@ public class PeerImpl implements Peer {
   private static final Integer CONSECUTIVE_HANDSHAKES_UNTIL_RESEND = 3;
 
   /**
-   * If a message isn't sent to a peer in this amount of time, send a keep alive meesage.
+   * If a message isn't sent to a peer in this amount of time, send a keep alive
+   * message.
    */
   private static final Integer MAX_MILLISECONDS_BETWEEN_MESSAGES = 20000;
+
+  /**
+   * Just in case our peer doesn't get the message that it is choked or
+   * unchoked, remind it on occasion.
+   */
+  private static final Integer MILLISECONDS_BETWEEN_CHOKE_STATUS_REMINDERS = 10000;
 
   /*
    * ##########################################################################
@@ -346,12 +353,9 @@ public class PeerImpl implements Peer {
     Preconditions.checkNotNull(metainfo);
     Preconditions.checkNotNull(data);
 
-    /*
-     * BitField messages will not be processed in this experiment. Port messages
-     * will not be processed in this experiment.
-     */
-
     rehandshake();
+
+    remindPeersOfChokeStatus();
 
     // TODO: bitfield
     // TODO: cancel
@@ -360,7 +364,6 @@ public class PeerImpl implements Peer {
     // TODO: interested
     // TODO: notinterested
     // TODO: piece
-    // TODO: port
     // TODO: request
     // TODO: unchoke
 
@@ -472,6 +475,37 @@ public class PeerImpl implements Peer {
           sendHandshakeMessage(injector.getInstance(HandshakeFactory.class)
               .create(this, peer, HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
                   metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
+        }
+      }
+    }
+  }
+
+  private void remindPeersOfChokeStatus() {
+    Set<Peer> peers;
+    synchronized (activePeers) {
+      peers = activePeers.keySet();
+    }
+
+    for (Peer peer : peers) {
+      PeerState peerState = getStateForPeer(peer);
+
+      Pair<ChokeStatus, Instant> remoteChokeStatus = null;
+      synchronized (peerState) {
+        remoteChokeStatus = peerState.isRemoteChoked();
+      }
+
+      if (remoteChokeStatus != null) {
+        Instant now = new Instant();
+
+        if (now.isAfter(remoteChokeStatus.snd
+            .plus(MILLISECONDS_BETWEEN_CHOKE_STATUS_REMINDERS))) {
+          if (remoteChokeStatus.fst.equals(ChokeStatus.CHOKED)) {
+            sendChokeMessage(injector.getInstance(ChokeFactory.class).create(
+                this, peer));
+          } else {
+            sendUnchokeMessage(injector.getInstance(UnchokeFactory.class).create(
+                this, peer));
+          }
         }
       }
     }
@@ -1061,14 +1095,14 @@ public class PeerImpl implements Peer {
    * @param remotePeer
    * @param unchoke
    */
-  private void sendUnchokeMessage(Peer remotePeer, Unchoke unchoke) {
-    PeerState state = getStateForPeer(remotePeer);
+  private void sendUnchokeMessage(Unchoke unchoke) {
+    PeerState state = getStateForPeer(unchoke.getReceivingPeer());
 
     synchronized (state) {
       state.setRemoteIsChoked(ChokeStatus.UNCHOKED, new Instant());
     }
 
-    remotePeer.message(unchoke);
+    unchoke.getReceivingPeer().message(unchoke);
   }
 
   /**
