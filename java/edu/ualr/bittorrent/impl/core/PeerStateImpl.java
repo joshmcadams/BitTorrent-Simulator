@@ -1,6 +1,7 @@
 package edu.ualr.bittorrent.impl.core;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.joda.time.Instant;
 
@@ -32,6 +33,8 @@ public class PeerStateImpl implements PeerState {
   List<PieceUpload> piecesUploaded = Lists.newArrayList();
   List<PieceDeclaration> remoteDeclaredPieces = Lists.newArrayList();
   List<PieceDeclaration> localDeclaredPieces = Lists.newArrayList();
+  AtomicInteger remoteHandshakeCount = new AtomicInteger(0);
+  AtomicInteger localHandshakeCount = new AtomicInteger(0);
 
   /**
    * Default implementation of the {@link PieceTransfer} interface.
@@ -474,6 +477,7 @@ public class PeerStateImpl implements PeerState {
    */
   public void setLocalSentHandshakeAt(Instant when) {
     this.lastLocalHandshakeSentAt = Preconditions.checkNotNull(when);
+    localHandshakeCount.incrementAndGet();
   }
 
   /**
@@ -549,6 +553,7 @@ public class PeerStateImpl implements PeerState {
    */
   public void setRemoteSentHandshakeAt(Instant when) {
     this.lastRemoteHandshakeSentAt = Preconditions.checkNotNull(when);
+    remoteHandshakeCount.incrementAndGet();
   }
 
   /**
@@ -584,5 +589,13 @@ public class PeerStateImpl implements PeerState {
    */
   public void setLocalHasPiece(PieceDeclaration declaration) {
     localDeclaredPieces.add(Preconditions.checkNotNull(declaration));
+  }
+
+  public Integer howManyHandshakesHasTheLocalSent() {
+    return localHandshakeCount.get();
+  }
+
+  public Integer howManyHandshakesHasTheRemoteSent() {
+    return remoteHandshakeCount.get();
   }
 }

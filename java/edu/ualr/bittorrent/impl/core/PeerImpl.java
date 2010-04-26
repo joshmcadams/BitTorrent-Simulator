@@ -128,6 +128,26 @@ public class PeerImpl implements Peer {
    */
   private Instant nextCommunicationWithTracker;
 
+  /**
+   * Time to wait on a peer to send a handshake before sending that peer another
+   * handshake
+   */
+  private static final Integer REHANDSHAKE_WAIT_MILLISECONDS = 10000;
+
+  /**
+   * Time to wait on a peer to send a handshake before removing that peer from
+   * the active peers list
+   */
+  private static final Integer UNRESPONSIVE_HANDSHAKE_MILLISECONDS = 100000;
+
+  /**
+   * Since timing could be an issue, the remote peer might send a handshake more than once
+   * before it gets a reply. Every handshake shouldn't be replied to if one has already been sent, so instead
+   * of replying to every handshake, the peer will only reply to a handshake message from a peer
+   * that it has already responded to if three handshakes in a row occur.
+   */
+  private static final Integer CONSECUTIVE_HANDSHAKES_UNTIL_RESEND = 3;
+
   /*
    * ##########################################################################
    * C O N S T R U C T O R S
@@ -302,7 +322,7 @@ public class PeerImpl implements Peer {
         synchronized (activePeers) {
           activePeers.put(peer, new PeerStateImpl());
         }
-        sendHandshakeMessage(peer, injector.getInstance(HandshakeFactory.class)
+        sendHandshakeMessage(injector.getInstance(HandshakeFactory.class)
             .create(this, peer, HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
                 metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
       }
@@ -318,6 +338,7 @@ public class PeerImpl implements Peer {
    * ##########################################################################
    */
 
+  // TODO: finish implementing this method
   public List<Pair<Peer, Message>> initiateCommunication() {
     Preconditions.checkNotNull(activePeers);
     Preconditions.checkNotNull(metainfo);
@@ -328,15 +349,9 @@ public class PeerImpl implements Peer {
      * will not be processed in this experiment.
      */
 
-    /*
-     * Handshake Any peer that I have not sent a handshake too will be sent a
-     * handshake.
-     */
+    rehandshake();
 
     /*
-     * Any peer that I have sent a handshake too, but who has not shaken back
-     * over the last x period of time will receive another handshake. After n
-     * attempts, the peer will be ignored.
      *
      * If a receive a handshake, i will accept it. If i recieve repeated
      * handshakes, I will respond with my own handshake.
@@ -411,6 +426,46 @@ public class PeerImpl implements Peer {
     }
   }
 
+  /**
+   * A handshake is sent to a new peer as soon as it is encountered, so we can
+   * assume that we have sent at least one handshake. Any peer who has not
+   * shaken back over the last x period of time will receive another handshake.
+   * After n attempts, the peer will be ignored.
+   */
+  private void rehandshake() {
+    Set<Peer> peers;
+    synchronized (activePeers) {
+      peers = activePeers.keySet();
+    }
+
+    for (Peer peer : peers) {
+      PeerState peerState = getStateForPeer(peer);
+
+      Instant remoteSentHandshakeAt = null;
+      Instant localSentHandshakeAt = null;
+      synchronized (peerState) {
+        remoteSentHandshakeAt = peerState.whenDidRemoteSendHandshake();
+        localSentHandshakeAt = peerState.whenDidLocalSendHandshake();
+      }
+
+      if (remoteSentHandshakeAt == null) {
+        Instant now = new Instant();
+
+        if (now.isAfter(localSentHandshakeAt
+            .plus(UNRESPONSIVE_HANDSHAKE_MILLISECONDS))) {
+          synchronized (activePeers) {
+            activePeers.remove(peer);
+          }
+        } else if (now.isAfter(localSentHandshakeAt
+            .plus(REHANDSHAKE_WAIT_MILLISECONDS))) {
+          sendHandshakeMessage(injector.getInstance(HandshakeFactory.class)
+              .create(this, peer, HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
+                  metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
+        }
+      }
+    }
+  }
+
   /*
    * ##########################################################################
    * M E S S A G E - P R O C C E S S I N G
@@ -454,7 +509,6 @@ public class PeerImpl implements Peer {
           "Peer %s sent an unsupported message of type %s", new String(message
               .getSendingPeer().getId()), message.getType()));
     }
-    respondToMessage(message);
   }
 
   /*
@@ -689,26 +743,47 @@ public class PeerImpl implements Peer {
    * @param remotePeer
    * @param handshake
    */
-  private void sendHandshakeMessage(Peer remotePeer, Handshake handshake) {
-    PeerState state = getStateForPeer(remotePeer);
+  private void sendHandshakeMessage(Handshake handshake) {
+    PeerState state = getStateForPeer(handshake.getReceivingPeer());
 
     synchronized (state) {
       state.setLocalSentHandshakeAt(new Instant());
     }
-    remotePeer.message(handshake);
+    handshake.getReceivingPeer().message(handshake);
   }
 
   /**
    * A handshake message is sent between peers to initiate communication. This
-   * method notes that the remote peer sent a handshake.
+   * method notes that the remote peer sent a handshake. Also, if the local peer
+   * has not sent a handshake, one is sent back to the remote.
    *
    * @param handshake
    */
   private void processHandshakeMessage(Handshake handshake) {
-    PeerState state = getStateForPeer(handshake.getSendingPeer());
+    PeerState peerState = getStateForPeer(handshake.getSendingPeer());
+    Instant localSentHandshakeAt;
 
-    synchronized (state) {
-      state.setRemoteSentHandshakeAt(new Instant());
+    synchronized (peerState) {
+      peerState.setRemoteSentHandshakeAt(new Instant());
+      localSentHandshakeAt = peerState.whenDidLocalSendHandshake();
+    }
+
+    if (localSentHandshakeAt == null) {
+      sendHandshakeMessage(injector.getInstance(HandshakeFactory.class).create(
+          this, handshake.getSendingPeer(),
+          HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
+          HandshakeImpl.DEFAULT_RESERVED_BYTES));
+    } else {
+      Integer remoteHandshakeCount;
+      synchronized (peerState) {
+        remoteHandshakeCount = peerState.howManyHandshakesHasTheRemoteSent();
+      }
+      if ((remoteHandshakeCount % CONSECUTIVE_HANDSHAKES_UNTIL_RESEND) == 0) {
+        sendHandshakeMessage(injector.getInstance(HandshakeFactory.class).create(
+            this, handshake.getSendingPeer(),
+            HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
+            HandshakeImpl.DEFAULT_RESERVED_BYTES));
+      }
     }
   }
 
@@ -1029,9 +1104,9 @@ public class PeerImpl implements Peer {
       List<Pair<Peer, Message>> messages) {
 
     /* If the remote peer hasn't sent a handshake yet, send them another */
-    if (!remoteHasSentHandshake(p, state, messages)) {
-      return true;
-    }
+//    if (!remoteHasSentHandshake(p, state, messages)) {
+//      return true;
+//    }
 
     /*
      * If we haven't started communicating with this peer yet, then the choke
@@ -1090,44 +1165,6 @@ public class PeerImpl implements Peer {
     messageSent = askForSomethingFromPeer(p, state, messages);
     messageSent &= respondToPeerRequests(p, state, messages);
     return messageSent;
-  }
-
-  private List<Pair<Peer, Message>> respondToMessage(Message message) {
-    Preconditions.checkNotNull(activePeers);
-    Preconditions.checkNotNull(metainfo);
-    Preconditions.checkNotNull(data);
-    Preconditions.checkNotNull(message);
-
-    return null;
-  }
-
-  /**
-   * Determine if the remote has sent a handshake, if not, trying sending
-   * another to the remote.
-   *
-   * @param remotePeer
-   * @param state
-   * @param messages
-   * @return
-   */
-  private boolean remoteHasSentHandshake(Peer remotePeer, PeerState state,
-      List<Pair<Peer, Message>> messages) {
-    Instant remoteSentHandshakeAt = null;
-    synchronized (state) {
-      remoteSentHandshakeAt = state.whenDidRemoteSendHandshake();
-    }
-
-    if (remoteSentHandshakeAt == null) {
-      // shake again just to be sure that the remote got ours
-      /*
-       * messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-       * HandshakeFactory.class).create(this, remotePeer,
-       * HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
-       * HandshakeImpl.DEFAULT_RESERVED_BYTES)));
-       */
-      return false;
-    }
-    return true;
   }
 
   /**
