@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.log4j.Logger;
 import org.joda.time.Instant;
 
 import com.google.common.base.Objects;
@@ -141,10 +142,16 @@ public class PeerImpl implements Peer {
   private static final Integer UNRESPONSIVE_HANDSHAKE_MILLISECONDS = 100000;
 
   /**
-   * Since timing could be an issue, the remote peer might send a handshake more than once
-   * before it gets a reply. Every handshake shouldn't be replied to if one has already been sent, so instead
-   * of replying to every handshake, the peer will only reply to a handshake message from a peer
-   * that it has already responded to if three handshakes in a row occur.
+   * Logger
+   */
+  private static final Logger logger = Logger.getLogger(PeerImpl.class);
+
+  /**
+   * Since timing could be an issue, the remote peer might send a handshake more
+   * than once before it gets a reply. Every handshake shouldn't be replied to
+   * if one has already been sent, so instead of replying to every handshake,
+   * the peer will only reply to a handshake message from a peer that it has
+   * already responded to if three handshakes in a row occur.
    */
   private static final Integer CONSECUTIVE_HANDSHAKES_UNTIL_RESEND = 3;
 
@@ -283,20 +290,11 @@ public class PeerImpl implements Peer {
     announce();
 
     while (true) {
-      /* subsequent tracker announcements */
       if (new Instant().isAfter(nextCommunicationWithTracker)) {
         announce();
       }
-
       initiateCommunication();
-
       processMessages();
-
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-        /* chomp */
-      }
     }
   }
 
@@ -322,6 +320,7 @@ public class PeerImpl implements Peer {
         synchronized (activePeers) {
           activePeers.put(peer, new PeerStateImpl());
         }
+        debug("1: %s %s", this, peer);
         sendHandshakeMessage(injector.getInstance(HandshakeFactory.class)
             .create(this, peer, HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
                 metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
@@ -454,6 +453,7 @@ public class PeerImpl implements Peer {
           }
         } else if (now.isAfter(localSentHandshakeAt
             .plus(REHANDSHAKE_WAIT_MILLISECONDS))) {
+          debug("2: %s %s", this, peer);
           sendHandshakeMessage(injector.getInstance(HandshakeFactory.class)
               .create(this, peer, HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
                   metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
@@ -620,13 +620,13 @@ public class PeerImpl implements Peer {
    * @param remotePeer
    * @param choke
    */
-  private void sendChokeMessage(Peer remotePeer, Choke choke) {
-    PeerState state = getStateForPeer(remotePeer);
+  private void sendChokeMessage(Choke choke) {
+    PeerState state = getStateForPeer(choke.getReceivingPeer());
 
     synchronized (state) {
       state.setRemoteIsChoked(ChokeStatus.CHOKED, new Instant());
     }
-    remotePeer.message(choke);
+    choke.getReceivingPeer().message(choke);
   }
 
   /**
@@ -746,6 +746,9 @@ public class PeerImpl implements Peer {
       state.setLocalSentHandshakeAt(new Instant());
     }
     handshake.getReceivingPeer().message(handshake);
+
+    sendChokeMessage(injector.getInstance(ChokeFactory.class).create(this,
+        handshake.getReceivingPeer()));
   }
 
   /**
@@ -765,6 +768,7 @@ public class PeerImpl implements Peer {
     }
 
     if (localSentHandshakeAt == null) {
+      debug("3: %s %s", this, handshake.getReceivingPeer());
       sendHandshakeMessage(injector.getInstance(HandshakeFactory.class).create(
           this, handshake.getSendingPeer(),
           HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
@@ -775,10 +779,11 @@ public class PeerImpl implements Peer {
         remoteHandshakeCount = peerState.howManyHandshakesHasTheRemoteSent();
       }
       if ((remoteHandshakeCount % CONSECUTIVE_HANDSHAKES_UNTIL_RESEND) == 0) {
-        sendHandshakeMessage(injector.getInstance(HandshakeFactory.class).create(
-            this, handshake.getSendingPeer(),
-            HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
-            HandshakeImpl.DEFAULT_RESERVED_BYTES));
+        debug("4: %s %s", this, handshake.getReceivingPeer());
+        sendHandshakeMessage(injector.getInstance(HandshakeFactory.class)
+            .create(this, handshake.getSendingPeer(),
+                HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
+                metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
       }
     }
   }
@@ -1089,6 +1094,17 @@ public class PeerImpl implements Peer {
     return state;
   }
 
+  /**
+   * Debugging utility method.
+   *
+   * @param objects
+   */
+  private void debug(Object... objects) {
+    String formatString = (String) objects[0];
+    System.arraycopy(objects, 1, objects, 0, objects.length - 1);
+    logger.debug(String.format(formatString, objects));
+  }
+
   /************************************************************************************************/
   /************************************************************************************************/
   /************************************************************************************************/
@@ -1100,9 +1116,9 @@ public class PeerImpl implements Peer {
       List<Pair<Peer, Message>> messages) {
 
     /* If the remote peer hasn't sent a handshake yet, send them another */
-//    if (!remoteHasSentHandshake(p, state, messages)) {
-//      return true;
-//    }
+    // if (!remoteHasSentHandshake(p, state, messages)) {
+    // return true;
+    // }
 
     /*
      * If we haven't started communicating with this peer yet, then the choke
