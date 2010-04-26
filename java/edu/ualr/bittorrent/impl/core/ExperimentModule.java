@@ -67,7 +67,7 @@ public class ExperimentModule extends AbstractModule {
     bind(new TypeLiteral<ImmutableList<String>>() {
     }).toInstance(ImmutableList.copyOf(pieces));
 
-    Metainfo.File file = new MetainfoImpl.FileImpl(new Long(
+    Metainfo.File file = new MetainfoImpl.FileImpl(new Integer(
         DEFAULT_PIECE_LENGTH * DEFAULT_PIECE_COUNT), DEFAULT_FILE_NAME);
     ImmutableList<Metainfo.File> files = ImmutableList.of(file);
 

@@ -19,11 +19,14 @@ import edu.ualr.bittorrent.interfaces.Tracker;
  * Default implementation of the {@link Metainfo} interface.
  */
 public class MetainfoImpl implements Metainfo {
-  final ImmutableList<Tracker> trackers;
-  final ImmutableList<String> pieces;
-  final ImmutableList<File> files;
-  final Integer pieceLength;
-  final byte[] infoHash;
+  private final ImmutableList<Tracker> trackers;
+  private final ImmutableList<String> pieces;
+  private final ImmutableList<File> files;
+  private final Integer pieceLength;
+  private final byte[] infoHash;
+  private final Integer lastPieceIndex;
+  private Integer lastPieceSize;
+  private Integer totalDownloadSize;
 
   /**
    * Create a new metainfo object, generating a new unique info hash.
@@ -56,6 +59,20 @@ public class MetainfoImpl implements Metainfo {
 
     this.infoHash = MessageDigest.getInstance("SHA").digest(
         UUID.randomUUID().toString().getBytes());
+
+    lastPieceIndex = pieces.size() - 1;
+
+    totalDownloadSize = 0;
+    for (File file : files) {
+      if (file != null) {
+        totalDownloadSize += file.getLength();
+      }
+    }
+
+    lastPieceSize = (totalDownloadSize % pieceLength);
+    if (lastPieceSize == 0) {
+      lastPieceSize = pieceLength;
+    }
   }
 
   @Override
@@ -121,7 +138,7 @@ public class MetainfoImpl implements Metainfo {
   /**
    * {@inheritDoc}
    */
-  public Long getLength() {
+  public Integer getLength() {
     if (files.size() > 1) {
       return null;
     }
@@ -177,7 +194,7 @@ public class MetainfoImpl implements Metainfo {
    * Default implementation of the {@link Metainfo.File} interface.
    */
   public static class FileImpl implements Metainfo.File {
-    final Long length;
+    final Integer length;
     final ImmutableList<String> name;
 
     /**
@@ -188,7 +205,7 @@ public class MetainfoImpl implements Metainfo {
      * @param name
      *          the name of the file, including path, as a list of strings
      */
-    public FileImpl(Long length, ImmutableList<String> name) {
+    public FileImpl(Integer length, ImmutableList<String> name) {
       this.length = Preconditions.checkNotNull(length);
       this.name = Preconditions.checkNotNull(name);
       Preconditions.checkArgument(name.size() > 0,
@@ -198,7 +215,7 @@ public class MetainfoImpl implements Metainfo {
     /**
      * {@inheritDoc}
      */
-    public Long getLength() {
+    public Integer getLength() {
       return length;
     }
 
@@ -215,5 +232,17 @@ public class MetainfoImpl implements Metainfo {
     public ImmutableList<String> getName() {
       return name;
     }
+  }
+
+  public Integer getLastPieceIndex() {
+    return lastPieceIndex;
+  }
+
+  public Integer getLastPieceSize() {
+    return lastPieceSize;
+  }
+
+  public Integer getTotalDownloadSize() {
+    return totalDownloadSize;
   }
 }
