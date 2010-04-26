@@ -255,15 +255,7 @@ public class PeerImpl implements Peer {
 
       initiateCommunication();
 
-      Message message = null;
-      synchronized (inboundMessageQueue) {
-        if (inboundMessageQueue.size() > 0) {
-          message = inboundMessageQueue.remove(0);
-        }
-      }
-      if (message != null) {
-        processMessage(message);
-      }
+      processMessages();
 
       try {
         Thread.sleep(1000);
@@ -1002,7 +994,19 @@ public class PeerImpl implements Peer {
     return null;
   }
 
-  public List<Pair<Peer, Message>> respondToMessage(Message message) {
+  private void processMessages() {
+    Message message = null;
+    synchronized (inboundMessageQueue) {
+      if (inboundMessageQueue.size() > 0) {
+        message = inboundMessageQueue.remove(0);
+      }
+    }
+    if (message != null) {
+      processMessage(message);
+    }
+  }
+
+  private List<Pair<Peer, Message>> respondToMessage(Message message) {
     Preconditions.checkNotNull(activePeers);
     Preconditions.checkNotNull(metainfo);
     Preconditions.checkNotNull(data);
