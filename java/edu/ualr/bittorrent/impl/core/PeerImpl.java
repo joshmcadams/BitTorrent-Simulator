@@ -352,10 +352,6 @@ public class PeerImpl implements Peer {
     rehandshake();
 
     /*
-     *
-     * If a receive a handshake, i will accept it. If i recieve repeated
-     * handshakes, I will respond with my own handshake.
-     *
      * Choke Any peer that I have shaken hands with, but have not choked will be
      * choked.
      *
