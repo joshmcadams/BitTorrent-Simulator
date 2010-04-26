@@ -302,6 +302,9 @@ public class PeerImpl implements Peer {
         synchronized (activePeers) {
           activePeers.put(peer, new PeerStateImpl());
         }
+        sendHandshakeMessage(peer, injector.getInstance(HandshakeFactory.class)
+            .create(this, peer, HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
+                metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
       }
     }
 
@@ -321,15 +324,16 @@ public class PeerImpl implements Peer {
     Preconditions.checkNotNull(data);
 
     /*
-     *
-     * List<Pair<Peer, Message>> messages = Lists.newArrayList();
-     *
      * BitField messages will not be processed in this experiment. Port messages
      * will not be processed in this experiment.
-     *
+     */
+
+    /*
      * Handshake Any peer that I have not sent a handshake too will be sent a
      * handshake.
-     *
+     */
+
+    /*
      * Any peer that I have sent a handshake too, but who has not shaken back
      * over the last x period of time will receive another handshake. After n
      * attempts, the peer will be ignored.
@@ -1029,12 +1033,11 @@ public class PeerImpl implements Peer {
     return metainfo.getTotalDownloadSize() - downloadedAmount;
   }
 
-  /************************************************************************************************/
-  /************************************************************************************************/
-  /************************************************************************************************/
-  /************************************************************************************************/
-  /************************************************************************************************/
-  /************************************************************************************************/
+  /*
+   * ##########################################################################
+   * U T I L I T I E S
+   * ##########################################################################
+   */
 
   /**
    * Package and send a state message.
@@ -1055,27 +1058,15 @@ public class PeerImpl implements Peer {
     return state;
   }
 
-  private PeerState returnStateIfAvailable(Peer p) {
-    if (p.equals(this)) {
-      return null;
-    }
-
-    PeerState state = null;
-    synchronized (activePeers) {
-      if (activePeers.containsKey(p)) {
-        state = activePeers.get(p);
-      }
-    }
-
-    return state;
-  }
+  /************************************************************************************************/
+  /************************************************************************************************/
+  /************************************************************************************************/
+  /************************************************************************************************/
+  /************************************************************************************************/
+  /************************************************************************************************/
 
   private boolean handleCommunicationInitalization(Peer p, PeerState state,
       List<Pair<Peer, Message>> messages) {
-    /* If the local client hasn't sent a handshake to this peer yet, send one */
-    if (sendHandshake(p, state, messages)) {
-      return true;
-    }
 
     /* If the remote peer hasn't sent a handshake yet, send them another */
     if (!remoteHasSentHandshake(p, state, messages)) {
@@ -1148,32 +1139,6 @@ public class PeerImpl implements Peer {
     Preconditions.checkNotNull(message);
 
     return null;
-  }
-
-  /**
-   * Determine if a handshake message should be sent and if so, add it to the
-   * message queue.
-   *
-   * @param remotePeer
-   * @param state
-   * @param messages
-   * @return
-   */
-  private boolean sendHandshake(Peer remotePeer, PeerState state,
-      List<Pair<Peer, Message>> messages) {
-    Instant localSentHandshakeAt = null;
-    synchronized (state) {
-      localSentHandshakeAt = state.whenDidLocalSendHandshake();
-    }
-    if (localSentHandshakeAt == null) {
-      messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-          HandshakeFactory.class).create(this, remotePeer,
-          HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
-          HandshakeImpl.DEFAULT_RESERVED_BYTES)));
-
-      return true;
-    }
-    return false;
   }
 
   /**
