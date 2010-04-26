@@ -64,9 +64,7 @@ public class MetainfoImpl implements Metainfo {
 
     totalDownloadSize = 0;
     for (File file : files) {
-      if (file != null) {
-        totalDownloadSize += file.getLength();
-      }
+      totalDownloadSize += file.getLength();
     }
 
     lastPieceSize = (totalDownloadSize % pieceLength);
