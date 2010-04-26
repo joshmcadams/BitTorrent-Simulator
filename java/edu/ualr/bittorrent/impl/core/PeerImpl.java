@@ -505,8 +505,8 @@ public class PeerImpl implements Peer {
             sendChokeMessage(injector.getInstance(ChokeFactory.class).create(
                 this, peer));
           } else {
-            sendUnchokeMessage(injector.getInstance(UnchokeFactory.class).create(
-                this, peer));
+            sendUnchokeMessage(injector.getInstance(UnchokeFactory.class)
+                .create(this, peer));
           }
         }
       }
@@ -546,8 +546,8 @@ public class PeerImpl implements Peer {
           }
         }
         if (!declared) {
-          sendHaveMessage(injector.getInstance(
-              HaveFactory.class).create(this, peer, pieceIndex));
+          sendHaveMessage(injector.getInstance(HaveFactory.class).create(this,
+              peer, pieceIndex));
         }
       }
     }
