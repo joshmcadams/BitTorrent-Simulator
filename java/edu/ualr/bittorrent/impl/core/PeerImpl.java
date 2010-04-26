@@ -7,7 +7,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.joda.time.Instant;
@@ -113,21 +112,31 @@ public class PeerImpl implements Peer {
   private final Map<Integer, byte[]> data;
 
   /*
-   *
+   * Injector used to create messages
    */
   private final Injector injector;
+
+  /*
+   * Arbitrarily chosen limit on the number of peers that will be unchoked at
+   * any gieven time
+   */
   private static final Integer UNCHOKED_PEER_LIMIT = 100;
 
+  /*
+   * Executor for threads
+   */
+  private final ExecutorService executor;
+
   /**
-   * Create a new PeerImpl object, providing a unique ID, the brains of the
-   * peer, and some initial data related to the torrent.
+   * Create a new PeerImpl object, providing a unique ID and some initial data
+   * related to the torrent.
    *
    * @param id
-   * @param brains
    * @param initialData
    */
-  public PeerImpl(byte[] id, Map<Integer, byte[]> initialData) {
+  public PeerImpl(byte[] id, Map<Integer, byte[]> initialData, ExecutorService executor) {
     this.id = Preconditions.checkNotNull(id);
+    this.executor = Preconditions.checkNotNull(executor);
     this.injector = Guice.createInjector(new MessagesModule());
 
     if (initialData == null) {
@@ -138,22 +147,22 @@ public class PeerImpl implements Peer {
   }
 
   /**
-   * Create a new PeerImpl object, providing the brains of the peer and some
-   * initial data related to the torrent.
+   * Create a new PeerImpl object, providing some initial data related to the
+   * torrent.
    *
    * @param brains
    * @param initialData
    */
-  public PeerImpl(Map<Integer, byte[]> initialData) {
-    this(UUID.randomUUID().toString().getBytes(), initialData);
+  public PeerImpl(Map<Integer, byte[]> initialData, ExecutorService executor) {
+    this(UUID.randomUUID().toString().getBytes(), initialData, executor);
   }
 
   /**
    * Create a new leeching PeerImpl object accepting the default
    * {@link PeerBrainsImpl} for peer decision making.
    */
-  public PeerImpl() {
-    this(UUID.randomUUID().toString().getBytes(), null);
+  public PeerImpl(ExecutorService executor) {
+    this(UUID.randomUUID().toString().getBytes(), null, executor);
   }
 
   /**
@@ -229,9 +238,7 @@ public class PeerImpl implements Peer {
       bytesRemaining.set(howMuchIsLeftToDownload());
     }
 
-    ExecutorService executor = Executors.newFixedThreadPool(2);
-
-    // line of communication with the tracker
+        // line of communication with the tracker
     executor.execute(new TrackerTalker(this, this.metainfo.getInfoHash()));
 
     // outbound peer communication

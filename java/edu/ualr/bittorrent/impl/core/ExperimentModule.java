@@ -8,7 +8,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -74,11 +77,15 @@ public class ExperimentModule extends AbstractModule {
     bind(new TypeLiteral<ImmutableList<Metainfo.File>>() {
     }).toInstance(ImmutableList.copyOf(files));
     bindConstant().annotatedWith(PieceLength.class).to(DEFAULT_PIECE_LENGTH);
-    bindConstant().annotatedWith(ThreadCount.class).to(DEFAULT_THREAD_COUNT);
+//    bindConstant().annotatedWith(ThreadCount.class).to(DEFAULT_THREAD_COUNT);
     bind(Metainfo.class).to(MetainfoImpl.class);
     bind(PeerProvider.class).to(PeerProviderImpl.class);
     bind(Simulator.class).to(SimulatorImpl.class);
     bindConstant().annotatedWith(ExperimentTimeout.class).to(10000000L);
+
+    ExecutorService executor = Executors.newFixedThreadPool(Preconditions
+        .checkNotNull(DEFAULT_THREAD_COUNT));
+    bind(ExecutorService.class).toInstance(executor);
   }
 
   @Retention(RetentionPolicy.RUNTIME)

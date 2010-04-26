@@ -1,17 +1,13 @@
 package edu.ualr.bittorrent.impl.core;
 
-import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.internal.Nullable;
 
-import edu.ualr.bittorrent.impl.core.ExperimentModule.ThreadCount;
 import edu.ualr.bittorrent.interfaces.Metainfo;
 import edu.ualr.bittorrent.interfaces.Peer;
 import edu.ualr.bittorrent.interfaces.PeerProvider;
@@ -27,7 +23,6 @@ import edu.ualr.bittorrent.interfaces.Tracker;
 public class SimulatorImpl implements Simulator {
   private final PeerProvider peerProvider;
   private final Metainfo metainfo;
-  private final List<Peer> peers = Lists.newArrayList();
   private final ExecutorService executor;
 
   /**
@@ -43,11 +38,10 @@ public class SimulatorImpl implements Simulator {
    */
   @Inject
   public SimulatorImpl(PeerProvider peerProvider, Metainfo metainfo,
-      @ThreadCount Integer threadCount) {
+      ExecutorService executor) {
     this.peerProvider = Preconditions.checkNotNull(peerProvider);
     this.metainfo = Preconditions.checkNotNull(metainfo);
-    this.executor = Executors.newFixedThreadPool(Preconditions
-        .checkNotNull(threadCount));
+    this.executor = Preconditions.checkNotNull(executor);
   }
 
   /**
@@ -95,7 +89,9 @@ public class SimulatorImpl implements Simulator {
       spawnTrackers();
       spawnPeers();
     } finally {
-      executor.shutdown();
+      if (!executor.isShutdown()) {
+        executor.shutdown();
+      }
     }
   }
 
@@ -131,16 +127,19 @@ public class SimulatorImpl implements Simulator {
    * to provide new {@link Peers},starting each in a new thread.
    */
   private void spawnPeers() {
-    ImmutableList<Peer> newPeers;
-    while ((newPeers = peerProvider.addPeers()) != null) {
-      synchronized (peers) {
-        peers.addAll(newPeers);
-      }
-      for (Peer peer : newPeers) {
-        if (executor.isShutdown()) {
-          return;
+    while (true) {
+      ImmutableList<Peer> newPeers = peerProvider.addPeers();
+      if (newPeers != null) {
+        for (Peer peer : newPeers) {
+          if (executor.isShutdown()) {
+            return;
+          }
+          executor.execute(peer);
         }
-        executor.execute(peer);
+      }
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) { /* chomp */
       }
     }
   }

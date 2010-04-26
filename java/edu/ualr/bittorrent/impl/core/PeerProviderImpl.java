@@ -2,6 +2,7 @@ package edu.ualr.bittorrent.impl.core;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -18,6 +19,7 @@ import edu.ualr.bittorrent.interfaces.PeerProvider;
 public class PeerProviderImpl implements PeerProvider {
   private boolean alreadyCalled = false;
   private final Metainfo metainfo;
+  private final ExecutorService executor;
   private final Map<Integer, byte[]> pieces;
 
   /**
@@ -27,9 +29,10 @@ public class PeerProviderImpl implements PeerProvider {
    * @param pieces
    */
   @Inject
-  public PeerProviderImpl(Metainfo metainfo, Map<Integer, byte[]> pieces) {
+  public PeerProviderImpl(Metainfo metainfo, Map<Integer, byte[]> pieces, ExecutorService executor) {
     this.metainfo = Preconditions.checkNotNull(metainfo);
     this.pieces = Preconditions.checkNotNull(pieces);
+    this.executor = Preconditions.checkNotNull(executor);
   }
 
   /**
@@ -42,12 +45,12 @@ public class PeerProviderImpl implements PeerProvider {
     alreadyCalled = true;
     List<Peer> peers = Lists.newArrayList();
     for (int i = 0; i < 10; i++) {
-      Peer peer = new PeerImpl(pieces);
+      Peer peer = new PeerImpl(pieces, executor);
       peer.setMetainfo(metainfo);
       peers.add(peer);
     }
     for (int i = 0; i < 10; i++) {
-      Peer peer = new PeerImpl();
+      Peer peer = new PeerImpl(executor);
       peer.setMetainfo(metainfo);
       peers.add(peer);
     }
