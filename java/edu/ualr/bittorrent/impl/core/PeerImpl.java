@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -101,12 +100,6 @@ public class PeerImpl implements Peer {
   private final Map<Peer, PeerState> activePeers = new ConcurrentHashMap<Peer, PeerState>();
 
   /*
-   * List of peers that the tracker has informed us about, but that we have not
-   * began communicating with
-   */
-  private final ConcurrentLinkedQueue<Peer> newlyReportedPeers = new ConcurrentLinkedQueue<Peer>();
-
-  /*
    * The data that is being downloaded
    */
   private final Map<Integer, byte[]> data;
@@ -122,10 +115,8 @@ public class PeerImpl implements Peer {
    */
   private static final Integer UNCHOKED_PEER_LIMIT = 100;
 
-  /*
-   * Executor for threads
-   */
-  private final ExecutorService executor;
+  private Instant lastCommunicationWithTracker;
+  private Integer trackerCommunicationInterval;
 
   /**
    * Create a new PeerImpl object, providing a unique ID and some initial data
@@ -134,9 +125,8 @@ public class PeerImpl implements Peer {
    * @param id
    * @param initialData
    */
-  public PeerImpl(byte[] id, Map<Integer, byte[]> initialData, ExecutorService executor) {
+  public PeerImpl(byte[] id, Map<Integer, byte[]> initialData) {
     this.id = Preconditions.checkNotNull(id);
-    this.executor = Preconditions.checkNotNull(executor);
     this.injector = Guice.createInjector(new MessagesModule());
 
     if (initialData == null) {
@@ -153,16 +143,16 @@ public class PeerImpl implements Peer {
    * @param brains
    * @param initialData
    */
-  public PeerImpl(Map<Integer, byte[]> initialData, ExecutorService executor) {
-    this(UUID.randomUUID().toString().getBytes(), initialData, executor);
+  public PeerImpl(Map<Integer, byte[]> initialData) {
+    this(UUID.randomUUID().toString().getBytes(), initialData);
   }
 
   /**
    * Create a new leeching PeerImpl object accepting the default
    * {@link PeerBrainsImpl} for peer decision making.
    */
-  public PeerImpl(ExecutorService executor) {
-    this(UUID.randomUUID().toString().getBytes(), null, executor);
+  public PeerImpl() {
+    this(UUID.randomUUID().toString().getBytes(), null);
   }
 
   /**
@@ -217,6 +207,26 @@ public class PeerImpl implements Peer {
     return new String(id);
   }
 
+  private void announce() {
+    synchronized (bytesRemaining) {
+      bytesRemaining.set(howMuchIsLeftToDownload());
+    }
+
+    TrackerResponse response = tracker.get(new TrackerRequestImpl(this,
+        metainfo.getInfoHash(), bytesDownloaded.get(), bytesUploaded.get(),
+        bytesRemaining.get()));
+    for (Peer peer : response.getPeers()) {
+      if (!activePeers.containsKey(peer)) {
+        synchronized (activePeers) {
+          activePeers.put(peer, new PeerStateImpl());
+        }
+      }
+    }
+
+    lastCommunicationWithTracker = new Instant();
+    trackerCommunicationInterval = response.getInterval() * 1000;
+  }
+
   /**
    * The PeerImpl is intended to run as a thread of a higher-level
    * {@link ExecutorService}. The peer itself creates a new
@@ -234,18 +244,23 @@ public class PeerImpl implements Peer {
     Preconditions.checkNotNull(id);
     Preconditions.checkNotNull(metainfo);
 
-    synchronized (bytesRemaining) {
-      bytesRemaining.set(howMuchIsLeftToDownload());
-    }
+    /* initial announcement to tracker */
+    announce();
 
-        // line of communication with the tracker
-    executor.execute(new TrackerTalker(this, this.metainfo.getInfoHash()));
-
-    // outbound peer communication
-    executor.execute(new PeerTalkerManager(this));
-
-    // inbound peer communication
     while (true) {
+      /* subsequent tracker announcements */
+      if (new Instant().isAfter(lastCommunicationWithTracker
+          .plus(trackerCommunicationInterval))) {
+        announce();
+      }
+
+      List<Pair<Peer, Message>> messages = getMessagesToDispatch(null);
+      if (messages != null) {
+        for (Pair<Peer, Message> peerAndMessage : messages) {
+          sendMessage(peerAndMessage.fst, peerAndMessage.snd);
+        }
+      }
+
       Message message = null;
       synchronized (inboundMessageQueue) {
         if (inboundMessageQueue.size() > 0) {
@@ -254,6 +269,12 @@ public class PeerImpl implements Peer {
       }
       if (message != null) {
         processMessage(message);
+      }
+
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        /* chomp */
       }
     }
   }
@@ -468,25 +489,6 @@ public class PeerImpl implements Peer {
     }
   }
 
-  private int howMuchIsLeftToDownload() {
-    int downloadedPieceCount = 0;
-    boolean downloadedLastPiece = false;
-
-    synchronized (data) {
-      downloadedPieceCount = data.size();
-      downloadedLastPiece = data.containsKey(metainfo.getLastPieceIndex());
-    }
-
-    int downloadedAmount = downloadedPieceCount * metainfo.getPieceLength();
-
-    if (downloadedLastPiece) {
-      downloadedAmount -= (metainfo.getPieceLength() - metainfo
-          .getLastPieceSize());
-    }
-
-    return metainfo.getTotalDownloadSize() - downloadedAmount;
-  }
-
   /**
    * A remote peer sends an {@link Unchoke} message to the local client to let
    * the local client know that it is okay to start sending requests for data.
@@ -547,96 +549,23 @@ public class PeerImpl implements Peer {
     }
   }
 
-  /**
-   * The TrackerTalker object is used by {@link PeerImpl} to keep a constant
-   * thread of communication open with the given {@link Tracker}. The allows for
-   * the {@link PeerImpl} to keep the {@link Tracker} updated with the status of
-   * the {@link PeerImpl} and allows for the {@link PeerImpl} to keep a fresh
-   * list of {@link Peer}s in the swarm.
-   */
-  private class TrackerTalker implements Runnable {
-    private final Peer parent;
-    private final byte[] infoHash;
+  private int howMuchIsLeftToDownload() {
+    int downloadedPieceCount = 0;
+    boolean downloadedLastPiece = false;
 
-    /**
-     * Creates a new {@link TrackerTalker} that can be used to keep
-     * communication flowing between the given client and a {@link Tracker}.
-     *
-     * @param parent
-     * @param infoHash
-     */
-    TrackerTalker(Peer parent, byte[] infoHash) {
-      this.parent = Preconditions.checkNotNull(parent);
-      this.infoHash = Preconditions.checkNotNull(infoHash);
+    synchronized (data) {
+      downloadedPieceCount = data.size();
+      downloadedLastPiece = data.containsKey(metainfo.getLastPieceIndex());
     }
 
-    /**
-     * Thread of execution that builds a request to the {@link Tracker}, sends
-     * the request, waits for the response, and then pulls the list of
-     * {@link Peers} reported by the {@link Tracker} from the response.
-     */
-    public void run() {
-      while (true) {
-        TrackerResponse response = tracker.get(new TrackerRequestImpl(parent,
-            infoHash, bytesDownloaded.get(), bytesUploaded.get(),
-            bytesRemaining.get()));
-        for (Peer peer : response.getPeers()) {
-          if (!parent.equals(peer)) {
-            newlyReportedPeers.add(peer);
-          }
-        }
-        try {
-          Thread.sleep(response.getInterval() * 1000);
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
-  }
+    int downloadedAmount = downloadedPieceCount * metainfo.getPieceLength();
 
-  /**
-   * PeerTalkerManager
-   */
-  private class PeerTalkerManager implements Runnable {
-    private final Peer local;
-
-    /**
-     * Create a new talker manager object.
-     *
-     * @param local
-     */
-    PeerTalkerManager(Peer local) {
-      this.local = Preconditions.checkNotNull(local);
+    if (downloadedLastPiece) {
+      downloadedAmount -= (metainfo.getPieceLength() - metainfo
+          .getLastPieceSize());
     }
 
-    /**
-     * As new peers are discovered, set up a communication channel with them.
-     */
-    public void run() {
-      while (true) {
-        // add new peers that have been provided to us by the tracker
-        for (Peer peer : newlyReportedPeers) {
-          if (!activePeers.containsKey(peer)) {
-            synchronized (activePeers) {
-              activePeers.put(peer, new PeerStateImpl());
-            }
-          }
-        }
-
-        List<Pair<Peer, Message>> messages = getMessagesToDispatch(null);
-        if (messages != null) {
-          for (Pair<Peer, Message> peerAndMessage : messages) {
-            sendMessage(peerAndMessage.fst, peerAndMessage.snd);
-          }
-        }
-
-        try {
-          Thread.sleep(1000L);
-        } catch (InterruptedException e) {
-          /* chomp */
-        }
-      }
-    }
+    return metainfo.getTotalDownloadSize() - downloadedAmount;
   }
 
   /**
