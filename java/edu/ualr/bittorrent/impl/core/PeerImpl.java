@@ -102,7 +102,8 @@ public class PeerImpl implements Peer {
   private final Map<Peer, PeerState> activePeers = new ConcurrentHashMap<Peer, PeerState>();
 
   /*
-   * List of peers that the tracker has informed us about, but that we have not began communicating with
+   * List of peers that the tracker has informed us about, but that we have not
+   * began communicating with
    */
   private final ConcurrentLinkedQueue<Peer> newlyReportedPeers = new ConcurrentLinkedQueue<Peer>();
 
@@ -472,7 +473,8 @@ public class PeerImpl implements Peer {
     int downloadedAmount = downloadedPieceCount * metainfo.getPieceLength();
 
     if (downloadedLastPiece) {
-      downloadedAmount -= (metainfo.getPieceLength() - metainfo.getLastPieceSize());
+      downloadedAmount -= (metainfo.getPieceLength() - metainfo
+          .getLastPieceSize());
     }
 
     return metainfo.getTotalDownloadSize() - downloadedAmount;
@@ -530,8 +532,11 @@ public class PeerImpl implements Peer {
           "Peer %s sent an unsupported message of type %s", new String(message
               .getSendingPeer().getId()), message.getType()));
     }
-    for (Pair<Peer, Message> peerAndMessage : getMessagesToDispatch(message)) {
-      sendMessage(peerAndMessage.fst, peerAndMessage.snd);
+    List<Pair<Peer, Message>> messages = getMessagesToDispatch(message);
+    if (messages != null) {
+      for (Pair<Peer, Message> peerAndMessage : messages) {
+        sendMessage(peerAndMessage.fst, peerAndMessage.snd);
+      }
     }
   }
 
@@ -611,8 +616,11 @@ public class PeerImpl implements Peer {
           }
         }
 
-        for (Pair<Peer, Message> peerAndMessage : getMessagesToDispatch(null)) {
-          sendMessage(peerAndMessage.fst, peerAndMessage.snd);
+        List<Pair<Peer, Message>> messages = getMessagesToDispatch(null);
+        if (messages != null) {
+          for (Pair<Peer, Message> peerAndMessage : messages) {
+            sendMessage(peerAndMessage.fst, peerAndMessage.snd);
+          }
         }
 
         try {
