@@ -60,6 +60,12 @@ import edu.ualr.bittorrent.interfaces.messages.UnchokeFactory;
  * Default peer implementation.
  */
 public class PeerImpl implements Peer {
+  /*
+   * ##########################################################################
+   * D E C L A R A T I O N S
+   * ##########################################################################
+   */
+
   /**
    * Tracker that we will be using to learn about other peers and that we will
    * be reporting our status to
@@ -122,11 +128,18 @@ public class PeerImpl implements Peer {
    */
   private Instant nextCommunicationWithTracker;
 
+  /*
+   * ##########################################################################
+   * C O N S T R U C T O R S
+   * ##########################################################################
+   */
+
   /**
    * Create a new PeerImpl object, providing a unique ID and some initial data
    * related to the torrent.
    *
    * @param id
+   *
    * @param initialData
    */
   public PeerImpl(byte[] id, Map<Integer, byte[]> initialData) {
@@ -159,6 +172,12 @@ public class PeerImpl implements Peer {
     this(UUID.randomUUID().toString().getBytes(), null);
   }
 
+  /*
+   * ##########################################################################
+   * I N T E R F A C E - I M P L E M E N T A T I O NS
+   * ##########################################################################
+   */
+
   /**
    * {@inheritDoc}
    */
@@ -182,6 +201,19 @@ public class PeerImpl implements Peer {
       inboundMessageQueue.add(message);
     }
   }
+
+  /**
+   * {@inheritDoc}
+   */
+  public void run() {
+    peer();
+  }
+
+  /*
+   * ##########################################################################
+   * C O R E - J A V A - O V E R R I D E S
+   * ##########################################################################
+   */
 
   /**
    * {@inheritDoc}
@@ -211,35 +243,18 @@ public class PeerImpl implements Peer {
     return new String(id);
   }
 
-  /**
-   * Announce to the tracker, receiving a list of peers to communicate with.
+  /*
+   * ##########################################################################
+   * P R I M A R Y - T H R E A D - D R I V E R
+   * ##########################################################################
    */
-  private void announce() {
-    synchronized (bytesRemaining) {
-      bytesRemaining.set(howMuchIsLeftToDownload());
-    }
-
-    TrackerResponse response = tracker.get(new TrackerRequestImpl(this,
-        metainfo.getInfoHash(), bytesDownloaded.get(), bytesUploaded.get(),
-        bytesRemaining.get()));
-    for (Peer peer : response.getPeers()) {
-      if (!activePeers.containsKey(peer)) {
-        synchronized (activePeers) {
-          activePeers.put(peer, new PeerStateImpl());
-        }
-      }
-    }
-
-    nextCommunicationWithTracker = new Instant()
-        .plus(response.getInterval() * 1000); // seconds to millis
-  }
 
   /**
    * Primary driver for the {@link Peer}. This thread runs continually,
    * announcing to the {@link Tracker} at regular intervals, and sending and
    * receiving {@link Message}s with other {@link Peer}s in the swarm.
    */
-  public void run() {
+  public void peer() {
     Preconditions.checkNotNull(tracker);
     Preconditions.checkNotNull(id);
     Preconditions.checkNotNull(metainfo);
@@ -265,228 +280,84 @@ public class PeerImpl implements Peer {
     }
   }
 
-  /**
-   * A {@link BitField} message is really just the remote peer letting the local
-   * peer know all of the pieces that it has via a single message instead of via
-   * multiple {@link Have} messages. This method parses the {@link BitField} and
-   * stores a {@link PieceDeclaration} for each piece that the remote claims to
-   * possess.
-   *
-   * @param bitfield
+  /*
+   * ##########################################################################
+   * T R A C K E R - I N T E R A C T I O N
+   * ##########################################################################
    */
-  private void processBitFieldMessage(BitField bitfield) {
-    PeerState state = activePeers.get(bitfield.getSendingPeer());
-    Instant now = new Instant();
-    for (int i = 0; i < bitfield.getBitField().length; i++) {
-      if (bitfield.getBitField()[i] != 0x0) {
-        PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
-        declaration.setDeclarationTime(now);
-        declaration.setPieceIndex(i);
-        synchronized (state) {
-          state.setRemoteHasPiece(declaration);
-        }
-      }
-    }
-  }
 
   /**
-   * After a remote peer requests a piece, it can later cancel that request by
-   * sending a cancel message. This method processes the given cancel message
-   * and notes the cancel in the peer state.
-   *
-   * @param cancel
+   * Announce to the tracker, receiving a list of peers to communicate with.
    */
-  private void processCancelMessage(Cancel cancel) {
-    PeerState state = activePeers.get(cancel.getSendingPeer());
-
-    PieceRequest request = new PeerStateImpl.PieceRequestImpl();
-    request.setPieceIndex(cancel.getPieceIndex());
-    request.setBlockOffset(cancel.getBeginningOffset());
-    request.setBlockSize(cancel.getBlockLength());
-    request.setRequestTime(new Instant());
-
-    synchronized (state) {
-      state.cancelRemoteRequestedPiece(request);
-    }
-  }
-
-  /**
-   * When choked by a remote peer, the local client should send any requests.
-   * This method notes the choke in shared state.
-   *
-   * @param choke
-   */
-  private void processChokeMessage(Choke choke) {
-    PeerState state = getStateForPeer(choke.getSendingPeer());
-
-    synchronized (state) {
-      state.setLocalIsChoked(ChokeStatus.CHOKED, new Instant());
-    }
-  }
-
-  /**
-   * In the real-world of BitTorrent, a remote peer might request communication
-   * on a specific port. This method takes note of the port request; however,
-   * since this simulator doesn't make actual network calls, the port operation
-   * does little more than update state.
-   *
-   * @param port
-   */
-  private void processPortMessage(Port port) {
-    PeerState state = getStateForPeer(port.getSendingPeer());
-
-    synchronized (state) {
-      state.setRemoteRequestedPort(port.getPort());
-    }
-  }
-
-  /**
-   * A request message is sent by the remote peer to request a specific piece
-   * from the local client. This method takes note of the specific request.
-   *
-   * @param request
-   */
-  private void processRequestMessage(Request request) {
-    PeerState state = activePeers.get(request.getSendingPeer());
-
-    PieceRequest pieceRequest = new PeerStateImpl.PieceRequestImpl();
-    pieceRequest.setPieceIndex(request.getPieceIndex());
-    pieceRequest.setBlockOffset(request.getBeginningOffset());
-    pieceRequest.setBlockSize(request.getBlockLength());
-    pieceRequest.setRequestTime(new Instant());
-
-    synchronized (state) {
-      state.setRemoteRequestedPiece(pieceRequest);
-    }
-  }
-
-  /**
-   * A handshake message is sent between peers to initiate communication. This
-   * method notes that the remote peer sent a handshake.
-   *
-   * @param handshake
-   */
-  private void processHandshakeMessage(Handshake handshake) {
-    PeerState state = getStateForPeer(handshake.getSendingPeer());
-
-    synchronized (state) {
-      state.setRemoteSentHandshakeAt(new Instant());
-    }
-  }
-
-  /**
-   * As a peer collects pieces, it announces the newly collected pieces to its
-   * peers. This method processes a piece announcement from a remote peer.
-   *
-   * @param have
-   */
-  private void processHaveMessage(Have have) {
-    PeerState state = getStateForPeer(have.getSendingPeer());
-
-    PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
-    declaration.setPieceIndex(have.getPieceIndex());
-    declaration.setDeclarationTime(new Instant());
-
-    synchronized (state) {
-      state.setRemoteHasPiece(declaration);
-    }
-  }
-
-  /**
-   * When a remote peer, probably a choked one, is interested in a piece that
-   * the local client has, it sends an {@link Interested} message to let the
-   * local client know that the remote is interested in what the local client
-   * has to offer. This method notes that interest.
-   *
-   * @param interested
-   */
-  private void processInterestedMessage(Interested interested) {
-    PeerState state = getStateForPeer(interested.getSendingPeer());
-
-    synchronized (state) {
-      state.setRemoteInterestLevelInLocal(InterestLevel.INTERESTED,
-          new Instant());
-    }
-  }
-
-  /**
-   * Periodically, clients should send a {@link KeepAlive} message to peers in
-   * which they are connected, just to let the peers know that the client is
-   * here and communicating... it just might not have had anything interesting
-   * to say for a while.
-   *
-   * @param keepAlive
-   */
-  private void processKeepAliveMessage(KeepAlive keepAlive) {
-    PeerState state = getStateForPeer(keepAlive.getSendingPeer());
-
-    synchronized (state) {
-      state.setRemoteSentKeepAliveAt(new Instant());
-    }
-  }
-
-  /**
-   * When a peer isn't interested in anything that the local client has to
-   * offer, it can tell them so using the {@link NotInterested} message. This
-   * lets the local client know that there really isn't any reason to unchoke
-   * the remote peer.
-   *
-   * @param notInterested
-   */
-  private void processNotInterestedMessage(NotInterested notInterested) {
-    PeerState state = getStateForPeer(notInterested.getSendingPeer());
-
-    synchronized (state) {
-      state.setRemoteInterestLevelInLocal(InterestLevel.NOT_INTERESTED,
-          new Instant());
-    }
-  }
-
-  /**
-   * When a remote peer sends a piece of data to the local client, it does so
-   * via a {@link Piece} message. This method collects that piece.
-   *
-   * @param piece
-   */
-  private void processPieceMessage(Piece piece) {
-    PeerState state = activePeers.get(piece.getSendingPeer());
-
-    PieceDownload download = new PeerStateImpl.PieceDownloadImpl();
-    download.setPieceIndex(piece.getPieceIndex());
-    download.setBlockOffset(piece.getBeginningOffset());
-    download.setBlockSize(piece.getBlock().length);
-    download.setStartTime(piece.getSentTime());
-    download.setCompletionTime(new Instant());
-
-    synchronized (state) {
-      state.setRemoteSentPiece(download);
-    }
-
-    synchronized (data) {
-      data.put(piece.getPieceIndex(), piece.getBlock());
-    }
-
+  private void announce() {
     synchronized (bytesRemaining) {
       bytesRemaining.set(howMuchIsLeftToDownload());
     }
 
-    synchronized (bytesDownloaded) {
-      bytesDownloaded.addAndGet(piece.getBlock().length);
+    TrackerResponse response = tracker.get(new TrackerRequestImpl(this,
+        metainfo.getInfoHash(), bytesDownloaded.get(), bytesUploaded.get(),
+        bytesRemaining.get()));
+    for (Peer peer : response.getPeers()) {
+      if (!activePeers.containsKey(peer)) {
+        synchronized (activePeers) {
+          activePeers.put(peer, new PeerStateImpl());
+        }
+      }
     }
+
+    nextCommunicationWithTracker = new Instant()
+        .plus(response.getInterval() * 1000); // seconds to millis
   }
 
-  /**
-   * A remote peer sends an {@link Unchoke} message to the local client to let
-   * the local client know that it is okay to start sending requests for data.
-   * This method notes the unchoked state.
-   *
-   * @param unchoke
+  /*
+   * ##########################################################################
+   * P E E R - I N T E R A C T I O N
+   * ##########################################################################
    */
-  private void processUnchokeMessage(Unchoke unchoke) {
-    PeerState state = getStateForPeer(unchoke.getSendingPeer());
 
-    synchronized (state) {
-      state.setLocalIsChoked(ChokeStatus.UNCHOKED, new Instant());
+  /*
+   * ##########################################################################
+   * M E S S A G E - P R O C C E S S I N G
+   * ##########################################################################
+   */
+
+  /**
+   * Dispatch a message to a peer.
+   *
+   * @param remotePeer
+   * @param message
+   */
+  private void sendMessage(Peer remotePeer, Message message) {
+    if (message instanceof BitField) {
+      sendBitFieldMessage(remotePeer, (BitField) message);
+    } else if (message instanceof Cancel) {
+      sendCancelMessage(remotePeer, (Cancel) message);
+    } else if (message instanceof Choke) {
+      sendChokeMessage(remotePeer, (Choke) message);
+    } else if (message instanceof Port) {
+      sendPortMessage(remotePeer, (Port) message);
+    } else if (message instanceof Request) {
+      sendRequestMessage(remotePeer, (Request) message);
+    } else if (message instanceof Handshake) {
+      sendHandshakeMessage(remotePeer, (Handshake) message);
+    } else if (message instanceof Have) {
+      sendHaveMessage(remotePeer, (Have) message);
+    } else if (message instanceof Interested) {
+      sendInterestedMessage(remotePeer, (Interested) message);
+    } else if (message instanceof KeepAlive) {
+      sendKeepAliveMessage(remotePeer, (KeepAlive) message);
+    } else if (message instanceof NotInterested) {
+      sendNotInterestedMessage(remotePeer, (NotInterested) message);
+    } else if (message instanceof Piece) {
+      sendPieceMessage(remotePeer, (Piece) message);
+    } else if (message instanceof Unchoke) {
+      sendUnchokeMessage(remotePeer, (Unchoke) message);
+    } else {
+      throw new IllegalArgumentException(
+          String
+              .format(
+                  "Local client %s attempting to send an unsupported message of type %s",
+                  new String(getId()), message.getType()));
     }
   }
 
@@ -530,64 +401,11 @@ public class PeerImpl implements Peer {
     respondToMessage(message);
   }
 
-  private int howMuchIsLeftToDownload() {
-    int downloadedPieceCount = 0;
-    boolean downloadedLastPiece = false;
-
-    synchronized (data) {
-      downloadedPieceCount = data.size();
-      downloadedLastPiece = data.containsKey(metainfo.getLastPieceIndex());
-    }
-
-    int downloadedAmount = downloadedPieceCount * metainfo.getPieceLength();
-
-    if (downloadedLastPiece) {
-      downloadedAmount -= (metainfo.getPieceLength() - metainfo
-          .getLastPieceSize());
-    }
-
-    return metainfo.getTotalDownloadSize() - downloadedAmount;
-  }
-
-  /**
-   * Dispatch a message to a peer.
-   *
-   * @param remotePeer
-   * @param message
+  /*
+   * ==========================================================================
+   * B I T F I E L D
+   * ==========================================================================
    */
-  private void sendMessage(Peer remotePeer, Message message) {
-    if (message instanceof BitField) {
-      sendBitFieldMessage(remotePeer, (BitField) message);
-    } else if (message instanceof Cancel) {
-      sendCancelMessage(remotePeer, (Cancel) message);
-    } else if (message instanceof Choke) {
-      sendChokeMessage(remotePeer, (Choke) message);
-    } else if (message instanceof Port) {
-      sendPortMessage(remotePeer, (Port) message);
-    } else if (message instanceof Request) {
-      sendRequestMessage(remotePeer, (Request) message);
-    } else if (message instanceof Handshake) {
-      sendHandshakeMessage(remotePeer, (Handshake) message);
-    } else if (message instanceof Have) {
-      sendHaveMessage(remotePeer, (Have) message);
-    } else if (message instanceof Interested) {
-      sendInterestedMessage(remotePeer, (Interested) message);
-    } else if (message instanceof KeepAlive) {
-      sendKeepAliveMessage(remotePeer, (KeepAlive) message);
-    } else if (message instanceof NotInterested) {
-      sendNotInterestedMessage(remotePeer, (NotInterested) message);
-    } else if (message instanceof Piece) {
-      sendPieceMessage(remotePeer, (Piece) message);
-    } else if (message instanceof Unchoke) {
-      sendUnchokeMessage(remotePeer, (Unchoke) message);
-    } else {
-      throw new IllegalArgumentException(
-          String
-              .format(
-                  "Local client %s attempting to send an unsupported message of type %s",
-                  new String(getId()), message.getType()));
-    }
-  }
 
   /**
    * Package and send a bitfield message.
@@ -614,6 +432,36 @@ public class PeerImpl implements Peer {
   }
 
   /**
+   * A {@link BitField} message is really just the remote peer letting the local
+   * peer know all of the pieces that it has via a single message instead of via
+   * multiple {@link Have} messages. This method parses the {@link BitField} and
+   * stores a {@link PieceDeclaration} for each piece that the remote claims to
+   * possess.
+   *
+   * @param bitfield
+   */
+  private void processBitFieldMessage(BitField bitfield) {
+    PeerState state = activePeers.get(bitfield.getSendingPeer());
+    Instant now = new Instant();
+    for (int i = 0; i < bitfield.getBitField().length; i++) {
+      if (bitfield.getBitField()[i] != 0x0) {
+        PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+        declaration.setDeclarationTime(now);
+        declaration.setPieceIndex(i);
+        synchronized (state) {
+          state.setRemoteHasPiece(declaration);
+        }
+      }
+    }
+  }
+
+  /*
+   * ==========================================================================
+   * C A N C E L
+   * ==========================================================================
+   */
+
+  /**
    * Package and send a cancel message.
    *
    * @param remotePeer
@@ -634,6 +482,33 @@ public class PeerImpl implements Peer {
   }
 
   /**
+   * After a remote peer requests a piece, it can later cancel that request by
+   * sending a cancel message. This method processes the given cancel message
+   * and notes the cancel in the peer state.
+   *
+   * @param cancel
+   */
+  private void processCancelMessage(Cancel cancel) {
+    PeerState state = activePeers.get(cancel.getSendingPeer());
+
+    PieceRequest request = new PeerStateImpl.PieceRequestImpl();
+    request.setPieceIndex(cancel.getPieceIndex());
+    request.setBlockOffset(cancel.getBeginningOffset());
+    request.setBlockSize(cancel.getBlockLength());
+    request.setRequestTime(new Instant());
+
+    synchronized (state) {
+      state.cancelRemoteRequestedPiece(request);
+    }
+  }
+
+  /*
+   * ==========================================================================
+   * C H O K E
+   * ==========================================================================
+   */
+
+  /**
    * Package and send a choke message.
    *
    * @param remotePeer
@@ -649,6 +524,110 @@ public class PeerImpl implements Peer {
   }
 
   /**
+   * When choked by a remote peer, the local client should send any requests.
+   * This method notes the choke in shared state.
+   *
+   * @param choke
+   */
+  private void processChokeMessage(Choke choke) {
+    PeerState state = getStateForPeer(choke.getSendingPeer());
+
+    synchronized (state) {
+      state.setLocalIsChoked(ChokeStatus.CHOKED, new Instant());
+    }
+  }
+
+  /*
+   * ==========================================================================
+   * P O R T
+   * ==========================================================================
+   */
+
+  /**
+   * Package and send a port message.
+   *
+   * @param remotePeer
+   * @param port
+   */
+  private void sendPortMessage(Peer remotePeer, Port port) {
+    PeerState state = getStateForPeer(remotePeer);
+
+    synchronized (state) {
+      state.setLocalRequestedPort(port.getPort());
+    }
+    remotePeer.message(port);
+  }
+
+  /**
+   * In the real-world of BitTorrent, a remote peer might request communication
+   * on a specific port. This method takes note of the port request; however,
+   * since this simulator doesn't make actual network calls, the port operation
+   * does little more than update state.
+   *
+   * @param port
+   */
+  private void processPortMessage(Port port) {
+    PeerState state = getStateForPeer(port.getSendingPeer());
+
+    synchronized (state) {
+      state.setRemoteRequestedPort(port.getPort());
+    }
+  }
+
+  /*
+   * ==========================================================================
+   * R E Q U E S T
+   * ==========================================================================
+   */
+
+  /**
+   * Package and send a request message.
+   *
+   * @param remotePeer
+   * @param request
+   */
+  private void sendRequestMessage(Peer remotePeer, Request request) {
+    PeerState state = getStateForPeer(remotePeer);
+
+    PieceRequest pieceRequest = new PeerStateImpl.PieceRequestImpl();
+    pieceRequest.setPieceIndex(request.getPieceIndex());
+    pieceRequest.setBlockOffset(request.getBeginningOffset());
+    pieceRequest.setBlockSize(request.getBlockLength());
+    pieceRequest.setRequestTime(new Instant());
+
+    synchronized (state) {
+      state.setLocalRequestedPiece(pieceRequest);
+    }
+    remotePeer.message(request);
+  }
+
+  /**
+   * A request message is sent by the remote peer to request a specific piece
+   * from the local client. This method takes note of the specific request.
+   *
+   * @param request
+   */
+  private void processRequestMessage(Request request) {
+    PeerState state = activePeers.get(request.getSendingPeer());
+
+    PieceRequest pieceRequest = new PeerStateImpl.PieceRequestImpl();
+    pieceRequest.setPieceIndex(request.getPieceIndex());
+    pieceRequest.setBlockOffset(request.getBeginningOffset());
+    pieceRequest.setBlockSize(request.getBlockLength());
+    pieceRequest.setRequestTime(new Instant());
+
+    synchronized (state) {
+      state.setRemoteRequestedPiece(pieceRequest);
+    }
+  }
+
+  /*
+   * ==========================================================================
+   * H A N D S H A K E
+   * ==========================================================================
+   */
+
+  /**
    * Package and send a handshake message.
    *
    * @param remotePeer
@@ -662,6 +641,26 @@ public class PeerImpl implements Peer {
     }
     remotePeer.message(handshake);
   }
+
+  /**
+   * A handshake message is sent between peers to initiate communication. This
+   * method notes that the remote peer sent a handshake.
+   *
+   * @param handshake
+   */
+  private void processHandshakeMessage(Handshake handshake) {
+    PeerState state = getStateForPeer(handshake.getSendingPeer());
+
+    synchronized (state) {
+      state.setRemoteSentHandshakeAt(new Instant());
+    }
+  }
+
+  /*
+   * ==========================================================================
+   * H A V E
+   * ==========================================================================
+   */
 
   /**
    * Package and send a have message.
@@ -684,6 +683,30 @@ public class PeerImpl implements Peer {
   }
 
   /**
+   * As a peer collects pieces, it announces the newly collected pieces to its
+   * peers. This method processes a piece announcement from a remote peer.
+   *
+   * @param have
+   */
+  private void processHaveMessage(Have have) {
+    PeerState state = getStateForPeer(have.getSendingPeer());
+
+    PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
+    declaration.setPieceIndex(have.getPieceIndex());
+    declaration.setDeclarationTime(new Instant());
+
+    synchronized (state) {
+      state.setRemoteHasPiece(declaration);
+    }
+  }
+
+  /*
+   * ==========================================================================
+   * I N T E R E S T E D
+   * ==========================================================================
+   */
+
+  /**
    * Package and send an interested message.
    *
    * @param remotePeer
@@ -698,6 +721,29 @@ public class PeerImpl implements Peer {
     }
     remotePeer.message(interested);
   }
+
+  /**
+   * When a remote peer, probably a choked one, is interested in a piece that
+   * the local client has, it sends an {@link Interested} message to let the
+   * local client know that the remote is interested in what the local client
+   * has to offer. This method notes that interest.
+   *
+   * @param interested
+   */
+  private void processInterestedMessage(Interested interested) {
+    PeerState state = getStateForPeer(interested.getSendingPeer());
+
+    synchronized (state) {
+      state.setRemoteInterestLevelInLocal(InterestLevel.INTERESTED,
+          new Instant());
+    }
+  }
+
+  /*
+   * ==========================================================================
+   * K E E P A L I V E
+   * ==========================================================================
+   */
 
   /**
    * Package and send a keepalive message.
@@ -715,6 +761,28 @@ public class PeerImpl implements Peer {
   }
 
   /**
+   * Periodically, clients should send a {@link KeepAlive} message to peers in
+   * which they are connected, just to let the peers know that the client is
+   * here and communicating... it just might not have had anything interesting
+   * to say for a while.
+   *
+   * @param keepAlive
+   */
+  private void processKeepAliveMessage(KeepAlive keepAlive) {
+    PeerState state = getStateForPeer(keepAlive.getSendingPeer());
+
+    synchronized (state) {
+      state.setRemoteSentKeepAliveAt(new Instant());
+    }
+  }
+
+  /*
+   * ==========================================================================
+   * N O T I N T E R E S T E D
+   * ==========================================================================
+   */
+
+  /**
    * Package and sent a not-interested message.
    *
    * @param remotePeer
@@ -730,6 +798,29 @@ public class PeerImpl implements Peer {
     }
     remotePeer.message(notInterested);
   }
+
+  /**
+   * When a peer isn't interested in anything that the local client has to
+   * offer, it can tell them so using the {@link NotInterested} message. This
+   * lets the local client know that there really isn't any reason to unchoke
+   * the remote peer.
+   *
+   * @param notInterested
+   */
+  private void processNotInterestedMessage(NotInterested notInterested) {
+    PeerState state = getStateForPeer(notInterested.getSendingPeer());
+
+    synchronized (state) {
+      state.setRemoteInterestLevelInLocal(InterestLevel.NOT_INTERESTED,
+          new Instant());
+    }
+  }
+
+  /*
+   * ==========================================================================
+   * P I E C E
+   * ==========================================================================
+   */
 
   /**
    * Package and send a piece message.
@@ -758,40 +849,43 @@ public class PeerImpl implements Peer {
   }
 
   /**
-   * Package and send a port message.
+   * When a remote peer sends a piece of data to the local client, it does so
+   * via a {@link Piece} message. This method collects that piece.
    *
-   * @param remotePeer
-   * @param port
+   * @param piece
    */
-  private void sendPortMessage(Peer remotePeer, Port port) {
-    PeerState state = getStateForPeer(remotePeer);
+  private void processPieceMessage(Piece piece) {
+    PeerState state = activePeers.get(piece.getSendingPeer());
+
+    PieceDownload download = new PeerStateImpl.PieceDownloadImpl();
+    download.setPieceIndex(piece.getPieceIndex());
+    download.setBlockOffset(piece.getBeginningOffset());
+    download.setBlockSize(piece.getBlock().length);
+    download.setStartTime(piece.getSentTime());
+    download.setCompletionTime(new Instant());
 
     synchronized (state) {
-      state.setLocalRequestedPort(port.getPort());
+      state.setRemoteSentPiece(download);
     }
-    remotePeer.message(port);
+
+    synchronized (data) {
+      data.put(piece.getPieceIndex(), piece.getBlock());
+    }
+
+    synchronized (bytesRemaining) {
+      bytesRemaining.set(howMuchIsLeftToDownload());
+    }
+
+    synchronized (bytesDownloaded) {
+      bytesDownloaded.addAndGet(piece.getBlock().length);
+    }
   }
 
-  /**
-   * Package and send a request message.
-   *
-   * @param remotePeer
-   * @param request
+  /*
+   * ==========================================================================
+   * U N C H O K E
+   * ==========================================================================
    */
-  private void sendRequestMessage(Peer remotePeer, Request request) {
-    PeerState state = getStateForPeer(remotePeer);
-
-    PieceRequest pieceRequest = new PeerStateImpl.PieceRequestImpl();
-    pieceRequest.setPieceIndex(request.getPieceIndex());
-    pieceRequest.setBlockOffset(request.getBeginningOffset());
-    pieceRequest.setBlockSize(request.getBlockLength());
-    pieceRequest.setRequestTime(new Instant());
-
-    synchronized (state) {
-      state.setLocalRequestedPiece(pieceRequest);
-    }
-    remotePeer.message(request);
-  }
 
   /**
    * Package and send an unchoke message.
@@ -808,6 +902,47 @@ public class PeerImpl implements Peer {
 
     remotePeer.message(unchoke);
   }
+
+  /**
+   * A remote peer sends an {@link Unchoke} message to the local client to let
+   * the local client know that it is okay to start sending requests for data.
+   * This method notes the unchoked state.
+   *
+   * @param unchoke
+   */
+  private void processUnchokeMessage(Unchoke unchoke) {
+    PeerState state = getStateForPeer(unchoke.getSendingPeer());
+
+    synchronized (state) {
+      state.setLocalIsChoked(ChokeStatus.UNCHOKED, new Instant());
+    }
+  }
+
+  private int howMuchIsLeftToDownload() {
+    int downloadedPieceCount = 0;
+    boolean downloadedLastPiece = false;
+
+    synchronized (data) {
+      downloadedPieceCount = data.size();
+      downloadedLastPiece = data.containsKey(metainfo.getLastPieceIndex());
+    }
+
+    int downloadedAmount = downloadedPieceCount * metainfo.getPieceLength();
+
+    if (downloadedLastPiece) {
+      downloadedAmount -= (metainfo.getPieceLength() - metainfo
+          .getLastPieceSize());
+    }
+
+    return metainfo.getTotalDownloadSize() - downloadedAmount;
+  }
+
+  /************************************************************************************************/
+  /************************************************************************************************/
+  /************************************************************************************************/
+  /************************************************************************************************/
+  /************************************************************************************************/
+  /************************************************************************************************/
 
   /**
    * Package and send a state message.
