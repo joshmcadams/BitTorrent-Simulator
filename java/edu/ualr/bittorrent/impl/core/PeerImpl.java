@@ -155,6 +155,11 @@ public class PeerImpl implements Peer {
    */
   private static final Integer CONSECUTIVE_HANDSHAKES_UNTIL_RESEND = 3;
 
+  /**
+   * If a message isn't sent to a peer in this amount of time, send a keep alive meesage.
+   */
+  private static final Integer MAX_MILLISECONDS_BETWEEN_MESSAGES = 20000;
+
   /*
    * ##########################################################################
    * C O N S T R U C T O R S
@@ -320,7 +325,6 @@ public class PeerImpl implements Peer {
         synchronized (activePeers) {
           activePeers.put(peer, new PeerStateImpl());
         }
-        debug("1: %s %s", this, peer);
         sendHandshakeMessage(injector.getInstance(HandshakeFactory.class)
             .create(this, peer, HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
                 metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
@@ -337,7 +341,6 @@ public class PeerImpl implements Peer {
    * ##########################################################################
    */
 
-  // TODO: finish implementing this method
   public List<Pair<Peer, Message>> initiateCommunication() {
     Preconditions.checkNotNull(activePeers);
     Preconditions.checkNotNull(metainfo);
@@ -349,6 +352,19 @@ public class PeerImpl implements Peer {
      */
 
     rehandshake();
+
+    // TODO: bitfield
+    // TODO: cancel
+    // TODO: choke
+    // TODO: have
+    // TODO: interested
+    // TODO: notinterested
+    // TODO: piece
+    // TODO: port
+    // TODO: request
+    // TODO: unchoke
+
+    keepAlive();
 
     /*
      * Choke Any peer that I have shaken hands with, but have not choked will be
@@ -453,11 +469,33 @@ public class PeerImpl implements Peer {
           }
         } else if (now.isAfter(localSentHandshakeAt
             .plus(REHANDSHAKE_WAIT_MILLISECONDS))) {
-          debug("2: %s %s", this, peer);
           sendHandshakeMessage(injector.getInstance(HandshakeFactory.class)
               .create(this, peer, HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
                   metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
         }
+      }
+    }
+  }
+
+  private void keepAlive() {
+    Set<Peer> peers;
+    synchronized (activePeers) {
+      peers = activePeers.keySet();
+    }
+
+    for (Peer peer : peers) {
+      PeerState peerState = getStateForPeer(peer);
+
+      Instant lastMessageSentByLocalAt = null;
+      synchronized (peerState) {
+        lastMessageSentByLocalAt = peerState.whenDidLocalSendLastMessage();
+      }
+
+      Instant now = new Instant();
+      if (now.isAfter(lastMessageSentByLocalAt
+          .plus(MAX_MILLISECONDS_BETWEEN_MESSAGES))) {
+        sendKeepAliveMessage(injector.getInstance(KeepAliveFactory.class)
+            .create(this, peer));
       }
     }
   }
@@ -768,7 +806,6 @@ public class PeerImpl implements Peer {
     }
 
     if (localSentHandshakeAt == null) {
-      debug("3: %s %s", this, handshake.getReceivingPeer());
       sendHandshakeMessage(injector.getInstance(HandshakeFactory.class).create(
           this, handshake.getSendingPeer(),
           HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
@@ -779,7 +816,6 @@ public class PeerImpl implements Peer {
         remoteHandshakeCount = peerState.howManyHandshakesHasTheRemoteSent();
       }
       if ((remoteHandshakeCount % CONSECUTIVE_HANDSHAKES_UNTIL_RESEND) == 0) {
-        debug("4: %s %s", this, handshake.getReceivingPeer());
         sendHandshakeMessage(injector.getInstance(HandshakeFactory.class)
             .create(this, handshake.getSendingPeer(),
                 HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
@@ -883,13 +919,13 @@ public class PeerImpl implements Peer {
    * @param remotePeer
    * @param keepAlive
    */
-  private void sendKeepAliveMessage(Peer remotePeer, KeepAlive keepAlive) {
-    PeerState state = getStateForPeer(remotePeer);
+  private void sendKeepAliveMessage(KeepAlive keepAlive) {
+    PeerState state = getStateForPeer(keepAlive.getReceivingPeer());
 
     synchronized (state) {
       state.setLocalSentKeepAliveAt(new Instant());
     }
-    remotePeer.message(keepAlive);
+    keepAlive.getReceivingPeer().message(keepAlive);
   }
 
   /**

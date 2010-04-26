@@ -17,6 +17,7 @@ import edu.ualr.bittorrent.interfaces.PeerState;
  * Default implementation of the {@link PeerState} interface.
  */
 public class PeerStateImpl implements PeerState {
+  // TODO: either pass in a clock and set all times or pass in all times
   Instant lastLocalHandshakeSentAt;
   Instant lastRemoteHandshakeSentAt;
   Instant lastLocalKeepAliveSentAt;
@@ -35,6 +36,8 @@ public class PeerStateImpl implements PeerState {
   List<PieceDeclaration> localDeclaredPieces = Lists.newArrayList();
   AtomicInteger remoteHandshakeCount = new AtomicInteger(0);
   AtomicInteger localHandshakeCount = new AtomicInteger(0);
+  Instant localLastMessageSentAt;
+  Instant remoteLastMessageSentAt;
 
   /**
    * Default implementation of the {@link PieceTransfer} interface.
@@ -332,6 +335,7 @@ public class PeerStateImpl implements PeerState {
       while (piecesRequestedByLocal.remove(Preconditions.checkNotNull(request))) {
       }
     }
+    localLastMessageSentAt = new Instant();
   }
 
   /**
@@ -343,6 +347,7 @@ public class PeerStateImpl implements PeerState {
           .remove(Preconditions.checkNotNull(request))) {
       }
     }
+    remoteLastMessageSentAt = new Instant();
   }
 
   /**
@@ -453,6 +458,7 @@ public class PeerStateImpl implements PeerState {
   public void setLocalInterestLevelInRemote(InterestLevel interest, Instant when) {
     localInterestLevelInRemote = new Pair<InterestLevel, Instant>(Preconditions
         .checkNotNull(interest), Preconditions.checkNotNull(when));
+    localLastMessageSentAt = new Instant();
   }
 
   /**
@@ -461,6 +467,7 @@ public class PeerStateImpl implements PeerState {
   public void setLocalIsChoked(ChokeStatus choked, Instant when) {
     localChokeStatus = new Pair<ChokeStatus, Instant>(Preconditions
         .checkNotNull(choked), Preconditions.checkNotNull(when));
+    remoteLastMessageSentAt = new Instant();
   }
 
   /**
@@ -470,6 +477,7 @@ public class PeerStateImpl implements PeerState {
     synchronized (piecesRequestedByLocal) {
       piecesRequestedByLocal.add(Preconditions.checkNotNull(request));
     }
+    localLastMessageSentAt = new Instant();
   }
 
   /**
@@ -478,6 +486,7 @@ public class PeerStateImpl implements PeerState {
   public void setLocalSentHandshakeAt(Instant when) {
     this.lastLocalHandshakeSentAt = Preconditions.checkNotNull(when);
     localHandshakeCount.incrementAndGet();
+    localLastMessageSentAt = new Instant();
   }
 
   /**
@@ -485,6 +494,7 @@ public class PeerStateImpl implements PeerState {
    */
   public void setLocalSentKeepAliveAt(Instant when) {
     this.lastLocalKeepAliveSentAt = Preconditions.checkNotNull(when);
+    localLastMessageSentAt = new Instant();
   }
 
   /**
@@ -502,6 +512,7 @@ public class PeerStateImpl implements PeerState {
       while (piecesRequestedByRemote.remove(request)) {
       }
     }
+    localLastMessageSentAt = new Instant();
   }
 
   /**
@@ -509,6 +520,7 @@ public class PeerStateImpl implements PeerState {
    */
   public void setRemoteHasPiece(PieceDeclaration declaration) {
     remoteDeclaredPieces.add(Preconditions.checkNotNull(declaration));
+    remoteLastMessageSentAt = new Instant();
   }
 
   /**
@@ -517,6 +529,7 @@ public class PeerStateImpl implements PeerState {
   public void setRemoteInterestLevelInLocal(InterestLevel interest, Instant when) {
     remoteInterestLevelInLocal = new Pair<InterestLevel, Instant>(Preconditions
         .checkNotNull(interest), Preconditions.checkNotNull(when));
+    remoteLastMessageSentAt = new Instant();
   }
 
   /**
@@ -525,6 +538,7 @@ public class PeerStateImpl implements PeerState {
   public void setRemoteIsChoked(ChokeStatus choked, Instant when) {
     remoteChokeStatus = new Pair<ChokeStatus, Instant>(Preconditions
         .checkNotNull(choked), Preconditions.checkNotNull(when));
+    localLastMessageSentAt = new Instant();
   }
 
   /**
@@ -532,6 +546,7 @@ public class PeerStateImpl implements PeerState {
    */
   public void setRemoteRequestedPiece(PieceRequest request) {
     piecesRequestedByRemote.add(Preconditions.checkNotNull(request));
+    remoteLastMessageSentAt = new Instant();
   }
 
   /**
@@ -539,6 +554,7 @@ public class PeerStateImpl implements PeerState {
    */
   public void setRemoteRequestedPort(int port) {
     this.remotePort = Preconditions.checkNotNull(port);
+    remoteLastMessageSentAt = new Instant();
   }
 
   /**
@@ -546,6 +562,7 @@ public class PeerStateImpl implements PeerState {
    */
   public void setLocalRequestedPort(int port) {
     this.localPort = Preconditions.checkNotNull(port);
+    localLastMessageSentAt = new Instant();
   }
 
   /**
@@ -554,6 +571,7 @@ public class PeerStateImpl implements PeerState {
   public void setRemoteSentHandshakeAt(Instant when) {
     this.lastRemoteHandshakeSentAt = Preconditions.checkNotNull(when);
     remoteHandshakeCount.incrementAndGet();
+    remoteLastMessageSentAt = new Instant();
   }
 
   /**
@@ -561,6 +579,7 @@ public class PeerStateImpl implements PeerState {
    */
   public void setRemoteSentKeepAliveAt(Instant when) {
     this.lastRemoteKeepAliveSentAt = Preconditions.checkNotNull(when);
+    remoteLastMessageSentAt = new Instant();
   }
 
   /**
@@ -568,6 +587,7 @@ public class PeerStateImpl implements PeerState {
    */
   public void setRemoteSentPiece(PieceDownload piece) {
     piecesDownloaded.add(Preconditions.checkNotNull(piece));
+    remoteLastMessageSentAt = new Instant();
   }
 
   /**
@@ -589,6 +609,7 @@ public class PeerStateImpl implements PeerState {
    */
   public void setLocalHasPiece(PieceDeclaration declaration) {
     localDeclaredPieces.add(Preconditions.checkNotNull(declaration));
+    localLastMessageSentAt = new Instant();
   }
 
   public Integer howManyHandshakesHasTheLocalSent() {
@@ -597,5 +618,13 @@ public class PeerStateImpl implements PeerState {
 
   public Integer howManyHandshakesHasTheRemoteSent() {
     return remoteHandshakeCount.get();
+  }
+
+  public Instant whenDidLocalSendLastMessage() {
+    return localLastMessageSentAt;
+  }
+
+  public Instant whenDidRemoteSendLastMessage() {
+    return remoteLastMessageSentAt;
   }
 }

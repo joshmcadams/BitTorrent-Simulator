@@ -471,4 +471,18 @@ public interface PeerState {
    * @return
    */
   int getRemotePort();
+
+  /**
+   * Return the time of the last message sent by local.
+   *
+   * @return
+   */
+  Instant whenDidLocalSendLastMessage();
+
+  /**
+   * Return the time of the last message sent by remote.
+   *
+   * @return
+   */
+  Instant whenDidRemoteSendLastMessage();
 }
