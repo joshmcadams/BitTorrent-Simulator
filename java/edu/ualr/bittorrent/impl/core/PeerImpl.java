@@ -357,6 +357,8 @@ public class PeerImpl implements Peer {
 
     remindPeersOfChokeStatus();
 
+    tellPeersAboutPiecesLocalHas();
+
     // TODO: bitfield
     // TODO: cancel
     // TODO: choke
@@ -506,6 +508,46 @@ public class PeerImpl implements Peer {
             sendUnchokeMessage(injector.getInstance(UnchokeFactory.class).create(
                 this, peer));
           }
+        }
+      }
+    }
+  }
+
+  private void tellPeersAboutPiecesLocalHas() {
+    Set<Integer> downloadedPieces = null;
+
+    synchronized (data) {
+      downloadedPieces = data.keySet();
+    }
+
+    if (downloadedPieces == null) {
+      return;
+    }
+
+    Set<Peer> peers;
+    synchronized (activePeers) {
+      peers = activePeers.keySet();
+    }
+
+    for (Peer peer : peers) {
+      PeerState peerState = getStateForPeer(peer);
+
+      List<PieceDeclaration> declaredPieces = null;
+      synchronized (peerState) {
+        declaredPieces = peerState.localHasPieces();
+      }
+
+      for (Integer pieceIndex : downloadedPieces) {
+        boolean declared = false;
+        for (PieceDeclaration piece : declaredPieces) {
+          if (pieceIndex.equals(piece.getPieceIndex())) {
+            declared = true;
+            break;
+          }
+        }
+        if (!declared) {
+          sendHaveMessage(injector.getInstance(
+              HaveFactory.class).create(this, peer, pieceIndex));
         }
       }
     }
@@ -870,8 +912,8 @@ public class PeerImpl implements Peer {
    * @param remotePeer
    * @param have
    */
-  private void sendHaveMessage(Peer remotePeer, Have have) {
-    PeerState state = getStateForPeer(remotePeer);
+  private void sendHaveMessage(Have have) {
+    PeerState state = getStateForPeer(have.getReceivingPeer());
 
     PeerState.PieceDeclaration declaration = new PeerStateImpl.PieceDeclarationImpl();
     declaration.setPieceIndex(have.getPieceIndex());
@@ -881,7 +923,7 @@ public class PeerImpl implements Peer {
       state.setLocalHasPiece(declaration);
     }
 
-    remotePeer.message(have);
+    have.getReceivingPeer().message(have);
   }
 
   /**
@@ -1275,56 +1317,6 @@ public class PeerImpl implements Peer {
   }
 
   /**
-   * As the local peer collects pieces, it should let its neighbors know.
-   *
-   * @param remotePeer
-   * @param state
-   * @param messages
-   * @return
-   */
-  private boolean letPeerKnowAboutNewPieces(Peer remotePeer, PeerState state,
-      List<Pair<Peer, Message>> messages) {
-
-    Set<Integer> downloadedPieces = null;
-
-    synchronized (data) {
-      downloadedPieces = data.keySet();
-    }
-
-    if (downloadedPieces == null) {
-      return false;
-    }
-
-    List<PieceDeclaration> declaredPieces = null;
-    synchronized (state) {
-      declaredPieces = state.localHasPieces();
-    }
-
-    if (declaredPieces == null) {
-      return false;
-    }
-
-    boolean pieceDeclared = false;
-
-    for (Integer pieceIndex : downloadedPieces) {
-      boolean declared = false;
-      for (PieceDeclaration piece : declaredPieces) {
-        if (pieceIndex.equals(piece.getPieceIndex())) {
-          declared = true;
-          break;
-        }
-      }
-      if (!declared) {
-        pieceDeclared = true;
-        messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-            HaveFactory.class).create(this, remotePeer, pieceIndex)));
-      }
-    }
-
-    return pieceDeclared;
-  }
-
-  /**
    * If a neighbor has a piece that we are interested in and if we are choked,
    * then we should let the neighbor know that we'd like to request a piece of
    * data from it, hoping that we will soon be unchoked. If the we are choked
@@ -1584,20 +1576,4 @@ public class PeerImpl implements Peer {
 
     return true;
   }
-
-  /**
-   * Let the peer know we are here.
-   *
-   * @param remotePeer
-   * @param state
-   * @param messages
-   * @return
-   */
-  private boolean sendKeepAlive(Peer remotePeer, PeerState state,
-      List<Pair<Peer, Message>> messages) {
-    messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-        KeepAliveFactory.class).create(this, remotePeer)));
-    return true;
-  }
-
 }
