@@ -362,11 +362,11 @@ public class PeerImpl implements Peer {
 
     rehandshake();
 
- //   remindPeersOfChokeStatus();
+    remindPeersOfChokeStatus();
 
-//    tellPeersAboutPiecesLocalHas();
+    tellPeersAboutPiecesLocalHas();
 
-  //   expressInterestOrDisinterest();
+    expressInterestOrDisinterest();
 
     // TODO: bitfield
     // TODO: cancel
@@ -614,17 +614,10 @@ public class PeerImpl implements Peer {
           .create(this, peer));
       return;
     }
-    if (downloadedPieces.size() < 10) {
-      debug ("rp: " + remotePieces.size() + " dp: " + downloadedPieces.size());
-    }
+
     for (PieceDeclaration pieceDeclaration : remotePieces) {
-      if (downloadedPieces.size() < 10) {
-      debug("x " + downloadedPieces.size() + " " + pieceDeclaration.getPieceIndex());
-      }
       if (!downloadedPieces.contains(pieceDeclaration.getPieceIndex())) {
         // if we sent the same message recently, don't send it again
-        debug("xx " + interest.fst + " " +now.isBefore(interest.snd
-            .plus(MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES)) );
         if (interest != null
             && interest.fst.equals(InterestLevel.INTERESTED)
             && now.isBefore(interest.snd
@@ -632,7 +625,6 @@ public class PeerImpl implements Peer {
           return;
         }
 
-        debug("2");
         sendInterestedMessage(injector.getInstance(InterestedFactory.class)
             .create(this, peer));
 
@@ -647,7 +639,7 @@ public class PeerImpl implements Peer {
             .plus(MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES))) {
       return;
     }
-    debug("3 " + downloadedPieces.size());
+
     sendNotInterestedMessage(injector.getInstance(NotInterestedFactory.class)
         .create(this, peer));
 
