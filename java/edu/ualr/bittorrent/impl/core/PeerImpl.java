@@ -362,11 +362,11 @@ public class PeerImpl implements Peer {
 
     rehandshake();
 
-    remindPeersOfChokeStatus();
+ //   remindPeersOfChokeStatus();
 
-    tellPeersAboutPiecesLocalHas();
+//    tellPeersAboutPiecesLocalHas();
 
-    expressInterestOrDisinterest();
+  //   expressInterestOrDisinterest();
 
     // TODO: bitfield
     // TODO: cancel

@@ -25,7 +25,7 @@ import edu.ualr.bittorrent.interfaces.Simulator;
 import edu.ualr.bittorrent.interfaces.Tracker;
 
 public class ExperimentModule extends AbstractModule {
-  private static final int DEFAULT_TRACKER_REQUEST_INTERVAL = 5000;
+  private static final int DEFAULT_TRACKER_REQUEST_INTERVAL = 5;
   private static final int DEFAULT_PIECE_LENGTH = 100;
   private static final int DEFAULT_PIECE_COUNT = 10;
   private static final int DEFAULT_THREAD_COUNT = 100;

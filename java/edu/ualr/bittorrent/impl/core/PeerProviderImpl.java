@@ -46,7 +46,7 @@ public class PeerProviderImpl implements PeerProvider {
       peer.setMetainfo(metainfo);
       peers.add(peer);
     }
-    for (int i = 0; i < 0; i++) {
+    for (int i = 0; i < 1; i++) {
       Peer peer = new PeerImpl();
       peer.setMetainfo(metainfo);
       peers.add(peer);
