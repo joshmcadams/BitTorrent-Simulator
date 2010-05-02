@@ -167,6 +167,13 @@ public class PeerImpl implements Peer {
    */
   private static final Integer MILLISECONDS_BETWEEN_CHOKE_STATUS_REMINDERS = 10000;
 
+  /**
+   * If our interest in a peer hasn't changed, we don't technically have to send
+   * them another interest message; however, it is nice to remind the peer of
+   * our interest, just not annoyingly.
+   */
+  private static final Integer MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES = 12345;
+
   /*
    * ##########################################################################
    * C O N S T R U C T O R S
@@ -328,7 +335,7 @@ public class PeerImpl implements Peer {
         metainfo.getInfoHash(), bytesDownloaded.get(), bytesUploaded.get(),
         bytesRemaining.get()));
     for (Peer peer : response.getPeers()) {
-      if (!activePeers.containsKey(peer)) {
+      if (!activePeers.containsKey(peer) && !this.equals(peer)) {
         synchronized (activePeers) {
           activePeers.put(peer, new PeerStateImpl());
         }
@@ -359,10 +366,11 @@ public class PeerImpl implements Peer {
 
     tellPeersAboutPiecesLocalHas();
 
+    expressInterestOrDisinterest();
+
     // TODO: bitfield
     // TODO: cancel
     // TODO: choke
-    // TODO: have
     // TODO: interested
     // TODO: notinterested
     // TODO: piece
@@ -551,6 +559,98 @@ public class PeerImpl implements Peer {
         }
       }
     }
+  }
+
+  private void expressInterestOrDisinterest() {
+    // TODO: seeders should automatically express disinterest
+    Set<Integer> downloadedPieces = null;
+
+    synchronized (data) {
+      downloadedPieces = data.keySet();
+    }
+
+    Set<Peer> peers;
+    synchronized (activePeers) {
+      peers = activePeers.keySet();
+    }
+
+    List<PieceDeclaration> remotePieces = null;
+    Pair<ChokeStatus, Instant> choked = null;
+    Pair<InterestLevel, Instant> interest = null;
+    for (Peer peer : peers) {
+      PeerState peerState = getStateForPeer(peer);
+
+      synchronized (peerState) {
+        choked = peerState.isLocalChoked();
+        remotePieces = peerState.remoteHasPieces();
+        interest = peerState.getLocalInterestLevelInRemote();
+      }
+
+      if (choked != null && ChokeStatus.UNCHOKED.equals(choked.fst)) {
+        continue; // if we are already unchoked, there is no reason to express
+        // interest
+      }
+
+      expressInterestOrDisinterest(downloadedPieces, interest, remotePieces,
+          peer);
+
+    }
+  }
+
+  private void expressInterestOrDisinterest(Set<Integer> downloadedPieces,
+      Pair<InterestLevel, Instant> interest,
+      List<PieceDeclaration> remotePieces, Peer peer) {
+    Instant now = new Instant();
+
+    // if there is nothing to express interest in, express disinterest
+    if (remotePieces == null) {
+      if (interest != null
+          && interest.fst.equals(InterestLevel.NOT_INTERESTED)
+          && now.isBefore(interest.snd
+              .plus(MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES))) {
+        return;
+      }
+      sendNotInterestedMessage(injector.getInstance(NotInterestedFactory.class)
+          .create(this, peer));
+      return;
+    }
+    if (downloadedPieces.size() < 10) {
+      debug ("rp: " + remotePieces.size() + " dp: " + downloadedPieces.size());
+    }
+    for (PieceDeclaration pieceDeclaration : remotePieces) {
+      if (downloadedPieces.size() < 10) {
+      debug("x " + downloadedPieces.size() + " " + pieceDeclaration.getPieceIndex());
+      }
+      if (!downloadedPieces.contains(pieceDeclaration.getPieceIndex())) {
+        // if we sent the same message recently, don't send it again
+        debug("xx " + interest.fst + " " +now.isBefore(interest.snd
+            .plus(MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES)) );
+        if (interest != null
+            && interest.fst.equals(InterestLevel.INTERESTED)
+            && now.isBefore(interest.snd
+                .plus(MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES))) {
+          return;
+        }
+
+        debug("2");
+        sendInterestedMessage(injector.getInstance(InterestedFactory.class)
+            .create(this, peer));
+
+        return; // only express interest once in this loop
+      }
+    }
+
+    // if we sent the same message recently, don't send it again
+    if (interest != null
+        && interest.fst.equals(InterestLevel.NOT_INTERESTED)
+        && now.isBefore(interest.snd
+            .plus(MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES))) {
+      return;
+    }
+    debug("3 " + downloadedPieces.size());
+    sendNotInterestedMessage(injector.getInstance(NotInterestedFactory.class)
+        .create(this, peer));
+
   }
 
   private void keepAlive() {
@@ -956,14 +1056,14 @@ public class PeerImpl implements Peer {
    * @param remotePeer
    * @param interested
    */
-  private void sendInterestedMessage(Peer remotePeer, Interested interested) {
-    PeerState state = getStateForPeer(remotePeer);
+  private void sendInterestedMessage(Interested interested) {
+    PeerState state = getStateForPeer(interested.getReceivingPeer());
 
     synchronized (state) {
       state.setLocalInterestLevelInRemote(InterestLevel.INTERESTED,
           new Instant());
     }
-    remotePeer.message(interested);
+    interested.getReceivingPeer().message(interested);
   }
 
   /**
@@ -1032,15 +1132,14 @@ public class PeerImpl implements Peer {
    * @param remotePeer
    * @param notInterested
    */
-  private void sendNotInterestedMessage(Peer remotePeer,
-      NotInterested notInterested) {
-    PeerState state = getStateForPeer(remotePeer);
+  private void sendNotInterestedMessage(NotInterested notInterested) {
+    PeerState state = getStateForPeer(notInterested.getReceivingPeer());
 
     synchronized (state) {
       state.setLocalInterestLevelInRemote(InterestLevel.NOT_INTERESTED,
           new Instant());
     }
-    remotePeer.message(notInterested);
+    notInterested.getReceivingPeer().message(notInterested);
   }
 
   /**
@@ -1250,11 +1349,11 @@ public class PeerImpl implements Peer {
      * Let peers that are choking and that have pieces that we want know that we
      * are interested
      */
-    if (expressInterest(p, state, messages)) {
-      return true;
-    } else if (makeRequests(p, state, messages)) {
-      return true;
-    }
+    // if (expressInterest(p, state, messages)) {
+    // return true;
+    // } else if (makeRequests(p, state, messages)) {
+    // return true;
+    // }
 
     return false;
   }
@@ -1314,56 +1413,6 @@ public class PeerImpl implements Peer {
       return true;
     }
     return false;
-  }
-
-  /**
-   * If a neighbor has a piece that we are interested in and if we are choked,
-   * then we should let the neighbor know that we'd like to request a piece of
-   * data from it, hoping that we will soon be unchoked. If the we are choked
-   * and our neighbor isn't interesting, let the know. Otherwise, don't send any
-   * messages about our interest.
-   *
-   * @param remotePeer
-   * @param state
-   * @param messages
-   * @return
-   */
-  private boolean expressInterest(Peer remotePeer, PeerState state,
-      List<Pair<Peer, Message>> messages) {
-
-    Set<Integer> downloadedPieces = null;
-
-    synchronized (data) {
-      downloadedPieces = data.keySet();
-    }
-
-    List<PieceDeclaration> remotePieces = null;
-    Pair<ChokeStatus, Instant> choked = null;
-
-    synchronized (state) {
-      choked = state.isLocalChoked();
-      remotePieces = state.remoteHasPieces();
-    }
-
-    if (choked != null && ChokeStatus.UNCHOKED.equals(choked.fst)) {
-      return false; // if we are already unchoked, there is no reason to express
-      // interest
-    }
-
-    if (remotePieces != null) {
-      for (PieceDeclaration pieceDeclaration : remotePieces) {
-        if (!downloadedPieces.contains(pieceDeclaration.getPieceIndex())) {
-          messages.add(new Pair<Peer, Message>(remotePeer, injector
-              .getInstance(InterestedFactory.class).create(this, remotePeer)));
-          return true;
-        }
-      }
-    }
-
-    messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-        NotInterestedFactory.class).create(this, remotePeer)));
-
-    return true;
   }
 
   /**
