@@ -174,6 +174,11 @@ public class PeerImpl implements Peer {
    */
   private static final Integer MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES = 12345;
 
+  /**
+   * Hard-limit on the number of peers that can be unchoked at any given time.
+   */
+  private static final Integer MAX_UNCHOKED_PEERS = 50;
+
   /*
    * ##########################################################################
    * C O N S T R U C T O R S
@@ -368,6 +373,8 @@ public class PeerImpl implements Peer {
 
     expressInterestOrDisinterest();
 
+    unchokePeers();
+
     // TODO: bitfield
     // TODO: cancel
     // TODO: choke
@@ -390,7 +397,7 @@ public class PeerImpl implements Peer {
      * Cancel After I receive a piece from a peer, I will tell other peers that
      * are sending that piece that I no longer need it.
      *
-     * Interested If a peer sends an interested message and it choked, I will
+     * Interested If a peer sends an interested message and it is choked, I will
      * consider unchoking them.
      *
      * If I am choked by a peer, but would like to get data from them, I will
@@ -642,7 +649,37 @@ public class PeerImpl implements Peer {
 
     sendNotInterestedMessage(injector.getInstance(NotInterestedFactory.class)
         .create(this, peer));
+  }
 
+  /*
+   * New peers will need to be optimistically unchoked
+   */
+  private void unchokePeers() {
+    Set<Peer> peers;
+    synchronized (activePeers) {
+      peers = activePeers.keySet();
+    }
+
+    if (MAX_UNCHOKED_PEERS > ) {
+      return;
+    }
+
+    for (Peer peer : peers) {
+      PeerState state;
+      synchronized (activePeers) {
+        state = activePeers.get(peer);
+      }
+
+      if (state == null) {
+        continue;
+      }
+
+      if (ChokeStatus.CHOKED.equals(state.isRemoteChoked()) &&
+          InterestLevel.INTERESTED.equals(state.getRemoteInterestLevelInLocal())) {
+        if ()
+        interestedAndChokedPeers.add(peer);
+      }
+    }
   }
 
   private void keepAlive() {
