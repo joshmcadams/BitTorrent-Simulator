@@ -9,9 +9,9 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.sun.tools.javac.util.Pair;
 
 import edu.ualr.bittorrent.interfaces.PeerState;
+import edu.ualr.bittorrent.util.Pair;
 
 /**
  * Default implementation of the {@link PeerState} interface.

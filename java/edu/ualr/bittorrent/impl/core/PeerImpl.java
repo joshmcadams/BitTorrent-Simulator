@@ -17,7 +17,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.sun.tools.javac.util.Pair;
 
 import edu.ualr.bittorrent.PeerMessage;
 import edu.ualr.bittorrent.impl.core.messages.HandshakeImpl;
@@ -56,6 +55,7 @@ import edu.ualr.bittorrent.interfaces.messages.Request;
 import edu.ualr.bittorrent.interfaces.messages.RequestFactory;
 import edu.ualr.bittorrent.interfaces.messages.Unchoke;
 import edu.ualr.bittorrent.interfaces.messages.UnchokeFactory;
+import edu.ualr.bittorrent.util.Pair;
 
 /**
  * Default peer implementation.

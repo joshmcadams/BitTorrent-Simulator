@@ -3,7 +3,8 @@ package edu.ualr.bittorrent.interfaces;
 import org.joda.time.Instant;
 
 import com.google.common.collect.ImmutableList;
-import com.sun.tools.javac.util.Pair;
+
+import edu.ualr.bittorrent.util.Pair;
 
 /**
  * Object used by "local" clients to encapsulates the state held between a local
