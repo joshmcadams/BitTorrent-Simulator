@@ -660,7 +660,7 @@ public class PeerImpl implements Peer {
       peers = activePeers.keySet();
     }
 
-    if (MAX_UNCHOKED_PEERS > ) {
+    if (MAX_UNCHOKED_PEERS > 100) {
       return;
     }
 
@@ -676,8 +676,8 @@ public class PeerImpl implements Peer {
 
       if (ChokeStatus.CHOKED.equals(state.isRemoteChoked()) &&
           InterestLevel.INTERESTED.equals(state.getRemoteInterestLevelInLocal())) {
-        if ()
-        interestedAndChokedPeers.add(peer);
+        //if ()
+        //interestedAndChokedPeers.add(peer);
       }
     }
   }
