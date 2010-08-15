@@ -8,6 +8,9 @@ BUILDING
 
 RUNNING
 
+  eport CLASSPATH=/paths/to/third-party/jars:/path/to/build/output
+  java edu.ualr.bittorrent.Experiment
+
 DEPENDENCIES
 
  - Google Java Collections Library [http://code.google.com/p/google-collections/]
