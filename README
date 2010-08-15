@@ -8,7 +8,7 @@ BUILDING
 
 RUNNING
 
-  eport CLASSPATH=/paths/to/third-party/jars:/path/to/build/output
+  export CLASSPATH=build:third-party-jars/guice-2.0.jar:third-party-jars/aopalliance.jar:third-party-jars/google-collect-1.0.jar:third-party-jars/guice-assistedinject-2.0.jar:third-party-jars/joda-time-1.6.jar:third-party-jars/log4j-1.2.15.jar 
   java edu.ualr.bittorrent.Experiment
 
 DEPENDENCIES

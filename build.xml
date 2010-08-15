@@ -26,10 +26,26 @@
   <target name="dist" depends="compile"
         description="generate the distribution" >
     <!-- Create the distribution directory -->
+    <delete file="lib/*jar" />
     <mkdir dir="${dist}/lib"/>
+    <delete file="META-INF/MANIFEST.MF"/>
 
-    <!-- Put everything in ${build} into the MyProject-${DSTAMP}.jar file -->
-    <jar jarfile="${dist}/lib/BitTorrentSimulator.jar" basedir="${build}"/>
+    <property name="version.num" value="1.00" />
+    <buildnumber file="META-INF/build.num" />
+
+    <manifest file="META-INF/MANIFEST.MF">
+        <attribute name="Built-By" value="${user.name}"/>
+        <attribute name="Main-Class" value="edu.ualr.bittorrent.Experiment"/>
+        <attribute name="Class-Path" value="third-party-jars/aopalliance.jar third-party-jars/guice-2.0.jar third-party-jars/joda-time-1.6.jar 
+third-party-jars/google-collect-1.0.jar third-party-jars/guice-assistedinject-2.0.jar third-party-jars/log4j-1.2.15.jar" />
+        <attribute name="Implementation-Version" value="${version.num}-b${build.number}"/> 
+    </manifest>
+
+    <jar jarfile="${dist}/lib/BitTorrentSimulator.jar" 
+         basedir="${build}"
+         includes="**/*class"
+         manifest="META-INF/MANIFEST.MF"
+    />
   </target>
 
   <target name="clean"
@@ -37,5 +53,6 @@
     <!-- Delete the ${build} and ${dist} directory trees -->
     <delete dir="${build}"/>
     <delete dir="${dist}"/>
+    <delete file="META-INF/build.num"/>
   </target>
 </project>
