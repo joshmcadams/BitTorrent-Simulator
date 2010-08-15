@@ -2,6 +2,12 @@ BitTorrent Simulator
 
 A BitTorrent simulator used to test different algorithms.
 
+BUILDING
+
+  ant
+
+RUNNING
+
 DEPENDENCIES
 
  - Google Java Collections Library [http://code.google.com/p/google-collections/]
