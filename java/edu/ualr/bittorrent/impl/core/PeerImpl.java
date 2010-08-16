@@ -371,17 +371,17 @@ public class PeerImpl implements Peer {
 
     rehandshake();
 
+    // TODO: bitfield
     tellPeersAboutPiecesLocalHas();
 
     expressInterestOrDisinterest();
 
     unchokePeers();
 
-    // TODO: bitfield
+    sendPiecesToPeers();
+
     // TODO: cancel
     // TODO: choke
-    // TODO: interested
-    // TODO: notinterested
     // TODO: piece
     // TODO: request
     // TODO: unchoke
@@ -663,6 +663,63 @@ public class PeerImpl implements Peer {
         }
       }
     }
+  }
+
+  private void sendPiecesToPeers() {
+    // TODO: ignore peers who haven't shaken hands
+    Instant now = new Instant();
+    Pair<ChokeStatus, Instant> choked = null;
+    Pair<InterestLevel, Instant> interested = null;
+    ImmutableList<PieceRequest> requestedPieces = null;
+    Set<Peer> peers;
+    synchronized (activePeers) {
+      peers = activePeers.keySet();
+    }
+
+    for (Peer peer : peers) {
+      PeerState state;
+      synchronized (activePeers) {
+        state = activePeers.get(peer);
+      }
+
+      if (state == null) {
+        continue;
+      }
+
+      synchronized (state) {
+        choked = state.isRemoteChoked();
+        interested = state.getRemoteInterestLevelInLocal();
+        requestedPieces = state.getRemoteRequestedPieces();
+      }
+
+      if (choked == null || interested == null || requestedPieces == null) {
+        continue;
+      }
+
+      if (ChokeStatus.CHOKED.equals(choked.fst)) {
+        continue;
+      }
+
+      if (InterestLevel.NOT_INTERESTED.equals(interested.fst)) {
+        continue;
+      }
+
+      // TODO: be more selective about the piece being sent
+      // TODO: only send if it has been a while since you have sent a piece to
+      // this peer
+      // TODO: don't send more than N pieces to this peer until the peer sends a
+      // piece to you
+      PieceRequest request = null;
+      synchronized (requestedPieces) {
+        request = requestedPieces.remove(0);
+      }
+
+      sendPieceMessage(
+          peer,
+          injector.getInstance(PieceFactory.class).create(this, peer, request.getPieceIndex(),
+              request.getBlockOffset(), new byte[] {}));
+    }
+
   }
 
   private void keepAlive() {
