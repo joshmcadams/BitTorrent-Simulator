@@ -709,15 +709,28 @@ public class PeerImpl implements Peer {
       // this peer
       // TODO: don't send more than N pieces to this peer until the peer sends a
       // piece to you
-      PieceRequest request = null;
-      synchronized (requestedPieces) {
-        request = requestedPieces.remove(0);
+
+      if (requestedPieces.size() == 0) {
+        continue;
       }
 
-      sendPieceMessage(
-          peer,
-          injector.getInstance(PieceFactory.class).create(this, peer, request.getPieceIndex(),
-              request.getBlockOffset(), new byte[] {}));
+      PieceRequest request = requestedPieces.get(0);
+
+      // TODO: this seems like a lot of unnecessary data copying
+      Piece piece = injector.getInstance(PieceFactory.class).create(this, peer,
+          request.getPieceIndex(), request.getBlockOffset(), new byte[] {});
+      PieceUpload pieceUpload = new PeerStateImpl.PieceUploadImpl();
+      pieceUpload.setBlockOffset(request.getBlockOffset());
+      pieceUpload.setBlockSize(request.getBlockSize());
+      pieceUpload.setPieceIndex(request.getPieceIndex());
+      pieceUpload.setStartTime(new Instant());
+      pieceUpload.setCompletionTime(new Instant());
+
+      synchronized (state) {
+        state.setLocalSentPiece(pieceUpload);
+      }
+
+      sendPieceMessage(peer, piece);
     }
 
   }
