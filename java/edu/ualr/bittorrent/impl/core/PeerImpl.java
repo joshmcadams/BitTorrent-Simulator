@@ -498,6 +498,7 @@ public class PeerImpl implements Peer {
   }
 
   private void tellPeersAboutPiecesLocalHas() {
+    // TODO: ignore peers who haven't shaken hands
     Set<Integer> downloadedPieces = null;
 
     synchronized (data) {
@@ -538,6 +539,7 @@ public class PeerImpl implements Peer {
 
   private void expressInterestOrDisinterest() {
     // TODO: seeders should automatically express disinterest
+    // TODO: ignore peers who haven't shaken hands
     Set<Integer> downloadedPieces = null;
 
     synchronized (data) {
@@ -612,6 +614,7 @@ public class PeerImpl implements Peer {
    * New peers will need to be optimistically unchoked
    */
   private void unchokePeers() {
+    // TODO: ignore peers who haven't shaken hands
     Instant now = new Instant();
     Pair<ChokeStatus, Instant> choked = null;
     Pair<InterestLevel, Instant> interested = null;
@@ -663,6 +666,7 @@ public class PeerImpl implements Peer {
   }
 
   private void keepAlive() {
+    // TODO: ignore peers who haven't shaken hands
     Set<Peer> peers;
     synchronized (activePeers) {
       peers = activePeers.keySet();
