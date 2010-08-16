@@ -340,22 +340,22 @@ public class PeerImpl implements Peer {
       bytesRemaining.set(howMuchIsLeftToDownload());
     }
 
-    TrackerResponse response = tracker.get(new TrackerRequestImpl(this,
-        metainfo.getInfoHash(), bytesDownloaded.get(), bytesUploaded.get(),
-        bytesRemaining.get()));
+    TrackerResponse response = tracker.get(new TrackerRequestImpl(this, metainfo.getInfoHash(),
+        bytesDownloaded.get(), bytesUploaded.get(), bytesRemaining.get()));
     for (Peer peer : response.getPeers()) {
       if (!activePeers.containsKey(peer) && !this.equals(peer)) {
         synchronized (activePeers) {
           activePeers.put(peer, new PeerStateImpl());
         }
-        sendHandshakeMessage(injector.getInstance(HandshakeFactory.class)
-            .create(this, peer, HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
-                metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
+        sendHandshakeMessage(injector.getInstance(HandshakeFactory.class).create(this, peer,
+            HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
+            HandshakeImpl.DEFAULT_RESERVED_BYTES));
       }
     }
 
-    nextCommunicationWithTracker = new Instant()
-        .plus(response.getInterval() * 1000); // seconds to millis
+    nextCommunicationWithTracker = new Instant().plus(response.getInterval() * 1000); // seconds
+                                                                                      // to
+                                                                                      // millis
   }
 
   /*
@@ -377,7 +377,7 @@ public class PeerImpl implements Peer {
 
     unchokePeers();
 
-    remindPeersOfChokeStatus();
+    // TODO: delete - remindPeersOfChokeStatus();
 
     // TODO: bitfield
     // TODO: cancel
@@ -486,16 +486,14 @@ public class PeerImpl implements Peer {
       if (remoteSentHandshakeAt == null) {
         Instant now = new Instant();
 
-        if (now.isAfter(localSentHandshakeAt
-            .plus(UNRESPONSIVE_HANDSHAKE_MILLISECONDS))) {
+        if (now.isAfter(localSentHandshakeAt.plus(UNRESPONSIVE_HANDSHAKE_MILLISECONDS))) {
           synchronized (activePeers) {
             activePeers.remove(peer);
           }
-        } else if (now.isAfter(localSentHandshakeAt
-            .plus(REHANDSHAKE_WAIT_MILLISECONDS))) {
-          sendHandshakeMessage(injector.getInstance(HandshakeFactory.class)
-              .create(this, peer, HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
-                  metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
+        } else if (now.isAfter(localSentHandshakeAt.plus(REHANDSHAKE_WAIT_MILLISECONDS))) {
+          sendHandshakeMessage(injector.getInstance(HandshakeFactory.class).create(this, peer,
+              HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
+              HandshakeImpl.DEFAULT_RESERVED_BYTES));
         }
       }
     }
@@ -518,14 +516,11 @@ public class PeerImpl implements Peer {
       if (remoteChokeStatus != null) {
         Instant now = new Instant();
 
-        if (now.isAfter(remoteChokeStatus.snd
-            .plus(MILLISECONDS_BETWEEN_CHOKE_STATUS_REMINDERS))) {
+        if (now.isAfter(remoteChokeStatus.snd.plus(MILLISECONDS_BETWEEN_CHOKE_STATUS_REMINDERS))) {
           if (remoteChokeStatus.fst.equals(ChokeStatus.CHOKED)) {
-            sendChokeMessage(injector.getInstance(ChokeFactory.class).create(
-                this, peer));
+            sendChokeMessage(injector.getInstance(ChokeFactory.class).create(this, peer));
           } else {
-            sendUnchokeMessage(injector.getInstance(UnchokeFactory.class)
-                .create(this, peer));
+            sendUnchokeMessage(injector.getInstance(UnchokeFactory.class).create(this, peer));
           }
         }
       }
@@ -565,8 +560,7 @@ public class PeerImpl implements Peer {
           }
         }
         if (!declared) {
-          sendHaveMessage(injector.getInstance(HaveFactory.class).create(this,
-              peer, pieceIndex));
+          sendHaveMessage(injector.getInstance(HaveFactory.class).create(this, peer, pieceIndex));
         }
       }
     }
@@ -602,57 +596,46 @@ public class PeerImpl implements Peer {
         // interest
       }
 
-      expressInterestOrDisinterest(downloadedPieces, interest, remotePieces,
-          peer);
+      expressInterestOrDisinterest(downloadedPieces, interest, remotePieces, peer);
 
     }
   }
 
   private void expressInterestOrDisinterest(Set<Integer> downloadedPieces,
-      Pair<InterestLevel, Instant> interest,
-      List<PieceDeclaration> remotePieces, Peer peer) {
+      Pair<InterestLevel, Instant> interest, List<PieceDeclaration> remotePieces, Peer peer) {
     Instant now = new Instant();
 
     // if there is nothing to express interest in, express disinterest
     if (remotePieces == null) {
-      if (interest != null
-          && interest.fst.equals(InterestLevel.NOT_INTERESTED)
-          && now.isBefore(interest.snd
-              .plus(MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES))) {
+      if (interest != null && interest.fst.equals(InterestLevel.NOT_INTERESTED)
+          && now.isBefore(interest.snd.plus(MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES))) {
         return;
       }
-      sendNotInterestedMessage(injector.getInstance(NotInterestedFactory.class)
-          .create(this, peer));
+      sendNotInterestedMessage(injector.getInstance(NotInterestedFactory.class).create(this, peer));
       return;
     }
 
     for (PieceDeclaration pieceDeclaration : remotePieces) {
       if (!downloadedPieces.contains(pieceDeclaration.getPieceIndex())) {
         // if we sent the same message recently, don't send it again
-        if (interest != null
-            && interest.fst.equals(InterestLevel.INTERESTED)
-            && now.isBefore(interest.snd
-                .plus(MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES))) {
+        if (interest != null && interest.fst.equals(InterestLevel.INTERESTED)
+            && now.isBefore(interest.snd.plus(MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES))) {
           return;
         }
 
-        sendInterestedMessage(injector.getInstance(InterestedFactory.class)
-            .create(this, peer));
+        sendInterestedMessage(injector.getInstance(InterestedFactory.class).create(this, peer));
 
         return; // only express interest once in this loop
       }
     }
 
     // if we sent the same message recently, don't send it again
-    if (interest != null
-        && interest.fst.equals(InterestLevel.NOT_INTERESTED)
-        && now.isBefore(interest.snd
-            .plus(MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES))) {
+    if (interest != null && interest.fst.equals(InterestLevel.NOT_INTERESTED)
+        && now.isBefore(interest.snd.plus(MILLISECONDS_BETWEEN_REPEAT_INTEREST_MESSAGES))) {
       return;
     }
 
-    sendNotInterestedMessage(injector.getInstance(NotInterestedFactory.class)
-        .create(this, peer));
+    sendNotInterestedMessage(injector.getInstance(NotInterestedFactory.class).create(this, peer));
   }
 
   /*
@@ -667,7 +650,7 @@ public class PeerImpl implements Peer {
       peers = activePeers.keySet();
     }
 
-    if (MAX_UNCHOKED_PEERS > 100) {
+    if (MAX_UNCHOKED_PEERS > 100) { // TODO: this doesn't make any sense
       return;
     }
 
@@ -686,16 +669,25 @@ public class PeerImpl implements Peer {
         interested = state.getRemoteInterestLevelInLocal();
       }
 
-      if (choked == null || interested == null) {
+      if (choked == null) {
+        sendChokeMessage(injector.getInstance(ChokeFactory.class).create(this, peer));
         continue;
       }
 
-      if (ChokeStatus.CHOKED.equals(choked.fst)
-          && InterestLevel.INTERESTED.equals(interested.fst)) {
-        sendUnchokeMessage(injector.getInstance(UnchokeFactory.class).create(
-            this, peer));
-        // TODO: consider combining the re-expression of interest and
-        // choke/unchoke
+      if (interested == null) {
+        continue;
+      }
+
+      if (ChokeStatus.CHOKED.equals(choked.fst)) {
+        if (InterestLevel.INTERESTED.equals(interested.fst)) {
+          sendUnchokeMessage(injector.getInstance(UnchokeFactory.class).create(this, peer));
+        } else if (now.isAfter(choked.snd.plus(MILLISECONDS_BETWEEN_CHOKE_STATUS_REMINDERS))) {
+          sendChokeMessage(injector.getInstance(ChokeFactory.class).create(this, peer));
+        }
+      } else {
+        if (now.isAfter(choked.snd.plus(MILLISECONDS_BETWEEN_CHOKE_STATUS_REMINDERS))) {
+          sendUnchokeMessage(injector.getInstance(UnchokeFactory.class).create(this, peer));
+        }
       }
     }
   }
@@ -715,10 +707,8 @@ public class PeerImpl implements Peer {
       }
 
       Instant now = new Instant();
-      if (now.isAfter(lastMessageSentByLocalAt
-          .plus(MAX_MILLISECONDS_BETWEEN_MESSAGES))) {
-        sendKeepAliveMessage(injector.getInstance(KeepAliveFactory.class)
-            .create(this, peer));
+      if (now.isAfter(lastMessageSentByLocalAt.plus(MAX_MILLISECONDS_BETWEEN_MESSAGES))) {
+        sendKeepAliveMessage(injector.getInstance(KeepAliveFactory.class).create(this, peer));
       }
     }
   }
@@ -763,8 +753,8 @@ public class PeerImpl implements Peer {
       processUnchokeMessage((Unchoke) message);
     } else {
       throw new IllegalArgumentException(String.format(
-          "Peer %s sent an unsupported message of type %s", new String(message
-              .getSendingPeer().getId()), message.getType()));
+          "Peer %s sent an unsupported message of type %s", new String(message.getSendingPeer()
+              .getId()), message.getType()));
     }
   }
 
@@ -1029,20 +1019,18 @@ public class PeerImpl implements Peer {
     }
 
     if (localSentHandshakeAt == null) {
-      sendHandshakeMessage(injector.getInstance(HandshakeFactory.class).create(
-          this, handshake.getSendingPeer(),
-          HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
-          HandshakeImpl.DEFAULT_RESERVED_BYTES));
+      sendHandshakeMessage(injector.getInstance(HandshakeFactory.class).create(this,
+          handshake.getSendingPeer(), HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
+          metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
     } else {
       Integer remoteHandshakeCount;
       synchronized (peerState) {
         remoteHandshakeCount = peerState.howManyHandshakesHasTheRemoteSent();
       }
       if ((remoteHandshakeCount % CONSECUTIVE_HANDSHAKES_UNTIL_RESEND) == 0) {
-        sendHandshakeMessage(injector.getInstance(HandshakeFactory.class)
-            .create(this, handshake.getSendingPeer(),
-                HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
-                metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
+        sendHandshakeMessage(injector.getInstance(HandshakeFactory.class).create(this,
+            handshake.getSendingPeer(), HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER,
+            metainfo.getInfoHash(), HandshakeImpl.DEFAULT_RESERVED_BYTES));
       }
     }
   }
@@ -1107,8 +1095,7 @@ public class PeerImpl implements Peer {
     PeerState state = getStateForPeer(interested.getReceivingPeer());
 
     synchronized (state) {
-      state.setLocalInterestLevelInRemote(InterestLevel.INTERESTED,
-          new Instant());
+      state.setLocalInterestLevelInRemote(InterestLevel.INTERESTED, new Instant());
     }
     interested.getReceivingPeer().message(interested);
   }
@@ -1125,8 +1112,7 @@ public class PeerImpl implements Peer {
     PeerState state = getStateForPeer(interested.getSendingPeer());
 
     synchronized (state) {
-      state.setRemoteInterestLevelInLocal(InterestLevel.INTERESTED,
-          new Instant());
+      state.setRemoteInterestLevelInLocal(InterestLevel.INTERESTED, new Instant());
     }
   }
 
@@ -1183,8 +1169,7 @@ public class PeerImpl implements Peer {
     PeerState state = getStateForPeer(notInterested.getReceivingPeer());
 
     synchronized (state) {
-      state.setLocalInterestLevelInRemote(InterestLevel.NOT_INTERESTED,
-          new Instant());
+      state.setLocalInterestLevelInRemote(InterestLevel.NOT_INTERESTED, new Instant());
     }
     notInterested.getReceivingPeer().message(notInterested);
   }
@@ -1201,8 +1186,7 @@ public class PeerImpl implements Peer {
     PeerState state = getStateForPeer(notInterested.getSendingPeer());
 
     synchronized (state) {
-      state.setRemoteInterestLevelInLocal(InterestLevel.NOT_INTERESTED,
-          new Instant());
+      state.setRemoteInterestLevelInLocal(InterestLevel.NOT_INTERESTED, new Instant());
     }
   }
 
@@ -1320,8 +1304,7 @@ public class PeerImpl implements Peer {
     int downloadedAmount = downloadedPieceCount * metainfo.getPieceLength();
 
     if (downloadedLastPiece) {
-      downloadedAmount -= (metainfo.getPieceLength() - metainfo
-          .getLastPieceSize());
+      downloadedAmount -= (metainfo.getPieceLength() - metainfo.getLastPieceSize());
     }
 
     return metainfo.getTotalDownloadSize() - downloadedAmount;
@@ -1405,13 +1388,11 @@ public class PeerImpl implements Peer {
     return false;
   }
 
-  private boolean respondToPeerRequests(Peer p, PeerState state,
-      List<Pair<Peer, Message>> messages) {
+  private boolean respondToPeerRequests(Peer p, PeerState state, List<Pair<Peer, Message>> messages) {
     /* Unchoke some peers if there are any that seem worthy */
     if (unchoke(p, state, messages)) {
       return true;
-    } else if (sendPieces(p, state, messages)
-        || cancelPieceRequests(p, state, messages)) {
+    } else if (sendPieces(p, state, messages) || cancelPieceRequests(p, state, messages)) {
       return true;
     }
 
@@ -1454,8 +1435,8 @@ public class PeerImpl implements Peer {
     }
 
     if (choked == null) {
-      messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-          ChokeFactory.class).create(this, remotePeer)));
+      messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(ChokeFactory.class)
+          .create(this, remotePeer)));
 
       return true;
     }
@@ -1470,8 +1451,7 @@ public class PeerImpl implements Peer {
    * @param messages
    * @return
    */
-  private boolean unchoke(Peer remotePeer, PeerState state,
-      List<Pair<Peer, Message>> messages) {
+  private boolean unchoke(Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
 
     Pair<ChokeStatus, Instant> choked = null;
     Pair<InterestLevel, Instant> interest = null;
@@ -1510,8 +1490,8 @@ public class PeerImpl implements Peer {
     }
 
     if (unchokedPeerCount < UNCHOKED_PEER_LIMIT) {
-      messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-          UnchokeFactory.class).create(this, remotePeer)));
+      messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(UnchokeFactory.class)
+          .create(this, remotePeer)));
     }
 
     return true;
@@ -1525,8 +1505,7 @@ public class PeerImpl implements Peer {
    * @param messages
    * @return
    */
-  private boolean makeRequests(Peer remotePeer, PeerState state,
-      List<Pair<Peer, Message>> messages) {
+  private boolean makeRequests(Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
     // TODO: be more intelligent about requests (by intelligent, i really be
     // true to spec)
 
@@ -1559,8 +1538,7 @@ public class PeerImpl implements Peer {
         if (alreadyRequestedPieces != null) {
           for (PieceRequest request : alreadyRequestedPieces) {
             if (request.getPieceIndex().equals(piece.getPieceIndex())
-                && request.getRequestTime().isAfter(
-                    new Instant().minus(100000L))) {
+                && request.getRequestTime().isAfter(new Instant().minus(100000L))) {
               okayToRequest = false;
               break;
             }
@@ -1568,9 +1546,9 @@ public class PeerImpl implements Peer {
         }
 
         if (okayToRequest) {
-          messages.add(new Pair<Peer, Message>(remotePeer, injector
-              .getInstance(RequestFactory.class).create(this, remotePeer,
-                  piece.getPieceIndex(), 0, metainfo.getPieceLength())));
+          messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
+              RequestFactory.class).create(this, remotePeer, piece.getPieceIndex(), 0,
+              metainfo.getPieceLength())));
         }
 
         return true;
@@ -1588,8 +1566,7 @@ public class PeerImpl implements Peer {
    * @param messages
    * @return
    */
-  private boolean sendPieces(Peer remotePeer, PeerState state,
-      List<Pair<Peer, Message>> messages) {
+  private boolean sendPieces(Peer remotePeer, PeerState state, List<Pair<Peer, Message>> messages) {
 
     Pair<ChokeStatus, Instant> choked = null;
     List<PieceRequest> requestedPieces = null;
@@ -1632,9 +1609,8 @@ public class PeerImpl implements Peer {
       }
     }
 
-    messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-        PieceFactory.class).create(this, remotePeer, requestedIndex,
-        requestedOffset, bytes)));
+    messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(PieceFactory.class)
+        .create(this, remotePeer, requestedIndex, requestedOffset, bytes)));
 
     return true;
   }
@@ -1663,10 +1639,9 @@ public class PeerImpl implements Peer {
 
     for (PieceRequest request : requestedPieces) {
       if (downloadedPieces.contains(request.getPieceIndex())) {
-        messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(
-            CancelFactory.class).create(this, remotePeer,
-            request.getPieceIndex(), request.getBlockOffset(),
-            request.getBlockSize())));
+        messages.add(new Pair<Peer, Message>(remotePeer, injector.getInstance(CancelFactory.class)
+            .create(this, remotePeer, request.getPieceIndex(), request.getBlockOffset(),
+                request.getBlockSize())));
       }
     }
 
