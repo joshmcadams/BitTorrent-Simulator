@@ -377,8 +377,6 @@ public class PeerImpl implements Peer {
 
     unchokePeers();
 
-    // TODO: delete - remindPeersOfChokeStatus();
-
     // TODO: bitfield
     // TODO: cancel
     // TODO: choke
@@ -494,34 +492,6 @@ public class PeerImpl implements Peer {
           sendHandshakeMessage(injector.getInstance(HandshakeFactory.class).create(this, peer,
               HandshakeImpl.DEFAULT_PROTOCOL_IDENTIFIER, metainfo.getInfoHash(),
               HandshakeImpl.DEFAULT_RESERVED_BYTES));
-        }
-      }
-    }
-  }
-
-  private void remindPeersOfChokeStatus() {
-    Set<Peer> peers;
-    synchronized (activePeers) {
-      peers = activePeers.keySet();
-    }
-
-    for (Peer peer : peers) {
-      PeerState peerState = getStateForPeer(peer);
-
-      Pair<ChokeStatus, Instant> remoteChokeStatus = null;
-      synchronized (peerState) {
-        remoteChokeStatus = peerState.isRemoteChoked();
-      }
-
-      if (remoteChokeStatus != null) {
-        Instant now = new Instant();
-
-        if (now.isAfter(remoteChokeStatus.snd.plus(MILLISECONDS_BETWEEN_CHOKE_STATUS_REMINDERS))) {
-          if (remoteChokeStatus.fst.equals(ChokeStatus.CHOKED)) {
-            sendChokeMessage(injector.getInstance(ChokeFactory.class).create(this, peer));
-          } else {
-            sendUnchokeMessage(injector.getInstance(UnchokeFactory.class).create(this, peer));
-          }
         }
       }
     }
