@@ -369,6 +369,126 @@ public class PeerImpl implements Peer {
     Preconditions.checkNotNull(metainfo);
     Preconditions.checkNotNull(data);
 
+    /* == handshakes ==
+     * for (peer : peers) {
+     *   if (we have not sent the peer a handshake) {
+     *     send the peer a handshake
+     *   } else if (the peer has not sent us a handshake) {
+     *     if (we sent a handshake over some threshold ago) {
+     *       if (we have already sent n handshakes) {
+     *         disconnect from peer
+     *       } else {
+     *         send another handshake
+     *       }
+     *     }
+     *   }
+     * }
+     * 
+     * == haves ==
+     * for (peer : peers) {
+     *   next unless handshake is complete
+     *   for (piece : pieces_we_have) {
+     *     if (we haven't told the peer about the piece) {
+     *       send a have message
+     *     }
+     *   }
+     * }
+     * 
+     * == choke/unchoke ==
+     * for (peer : peers) {
+     *   next unless handshake is complete
+     *
+     *   if (peer is choked) {
+     *     if (peer is interested) {
+     *       if (peer is not choking us) {
+     *         if (we have peering slots available) {
+     *           send unchoke message
+     *         }
+     *       } else {
+     *         if (we have peering slots available) {
+     *           randomly make the decision to send an unchoke message
+     *         }
+     *       }
+     *     } else {
+     *       if (some threshold has passed or if we haven't sent the actual choke message) {
+     *         send choke message
+     *       }
+     *     }
+     *   } else { // [peer is unchoked]
+     *     if (peer is no longer interested) {
+     *       send a choke message
+     *     } else if (peer has not made a request for data since some threshold) {
+     *       send a choke message
+     *     }
+     *   }
+     * }
+     *
+     * == pieces ==
+     * for (peer : peers) {
+     *   next unless handshake is complete;
+     *   if (peer is unchoked) {
+     *     if (peer has requested data) {
+     *       if (peer has sent us data) {
+     *         send piece
+     *         send choke
+     *       } else {
+     *         randomly choose to send piece and choke
+     *       }
+     *     }
+     *   }
+     * }
+     * 
+     * == interest ==
+     * for (peer : peers) {
+     *   next unless handshake is complete;
+     *   if (peer has us choked) {
+     *     if (peer has data we care about) {
+     *       if (we haven't already expressed interest) {
+     *         send interest message
+     *       } else if (some threshold has passed) {
+     *         send interest message
+     *       }
+     *     } if (disinterest threshold has passed) {
+     *       send not interested message
+     *     }
+     *   } else {
+     *     if (peer no longer has peices we care about) {
+     *       send not interested message
+     *     }
+     *   }
+     * }
+     * 
+     * == request ==
+     * for (piece : most_needed_pieces) {
+     *   for (peer : peers) {
+     *     next unless handshake is complete;
+     *     next if peer is choking me;
+     *     if (peer has the current piece) {
+     *       if (there is still space in the request threshold) {
+     *         request the piece
+     *       }
+     *     }
+     *   }
+     * }
+     * 
+     * for (pieces just received) {
+     *   for (peer : peers) {
+     *     if (i had requested this piece from this peer and this peer didn't send me the piece) {
+     *       send a cancellation
+     *     }
+     *   }
+     * }
+     * 
+     * == keep alive ==
+     * for (peer : peers) {
+     *   next unless handshake is complete;
+     *   if (the peer hasn't sent a message to me in a while) {
+     *     disconnect from peer
+     *   } else if (i haven't sent a message to the peer for a while) {
+     *     send a keep alive
+     *   }
+     * }
+    */
     rehandshake();
 
     // TODO: bitfield
